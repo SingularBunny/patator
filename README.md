@@ -1,5 +1,12 @@
-## Invader extras
-Extras will be here...
+## [Invader] extras
+Difference between main stream of patator project:
+SSH module:
+*proxy support
+*tunnel validation
+*cheking by whois service that show a country, region, city of host and checking in blacklist.
+Execution logic:
+*Added cycle iterating of parameter. Parameter iterated in a loop until other options are tried.
+*Added pool iteration for big amount of nodes. All nodes are divided into pools on the number of streams. Each thread processes its own node that provides the lack of requests to the node at the same time from different threads. After working of the each pool is cleaned free list that protect memory leaks.
 
 Patator was written out of frustration from using Hydra, Medusa, Ncrack, Metasploit modules and Nmap NSE scripts for password guessing attacks. I opted for a different approach in order to not create yet another brute-forcing tool and avoid repeating the same shortcomings. Patator is a multi-threaded tool written in Python, that strives to be more reliable and flexible than his fellow predecessors.
 
