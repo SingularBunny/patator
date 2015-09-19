@@ -1,9 +1,11 @@
 ## [Invader] extras
 Difference between main stream of patator project:
+
 SSH module:
 * Proxy support
 * Tunnel validation
 * Cheking by whois service that show a country, region, city of host and checking in blacklist.
+
 Execution logic:
 * Added cycle iterating of parameter. Parameter iterated in a loop until other options are tried.
 * Added pool iteration for big amount of nodes. All nodes are divided into pools on the number of streams. Each thread processes its own node that provides the lack of requests to the node at the same time from different threads. After working of the each pool is cleaned free list that protect memory leaks.
